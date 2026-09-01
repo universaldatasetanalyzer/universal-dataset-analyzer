@@ -1,0 +1,125 @@
+order_id,customer_name,email,product,category,quantity,price,order_date,region,status
+1,Karim El-Sayed,karim.el-sayed@example.com,Notebook Set,Clothing,3,333.52,2025-01-01,North,Refunded
+2,Youssef Kamel,youssef.kamel@example.com,  OFFICE CHAIR  ,Home & Garden,1,343.39,2025-04-25,East,Pending
+3,Khaled Abdallah,khaled.abdallah@example.com,Fiction Novel,Books,2,438.12,2025-10-07,Central,Cancelled
+4,Mona Mostafa,mona.mostafa@example.com,Garden Hose,Home & Garden,8,288.97,2025-12-22,South,Cancelled
+5,Omar Nasser,omar.nasser@example.com,Bed Sheets,Clothing,6,380.54,2025-07-09,North,Cancelled
+6,Nour Nasser,nour.nasser@example.com,  FICTION NOVEL  ,Clothing,5,69.72,2025-10-13,Central,Refunded
+7,Ahmed Hassan,ahmed.hassan@example.com,  COFFEE MAKER  ,Toys,7,271.61,2025-09-28,West,Cancelled
+8,Yasmin Fahmy,yasmin.fahmy@example.com,Cookware Set,Clothing,8,9.43,2025-09-04,Central,Pending
+9,Laila Fahmy,laila.fahmy@example.com,  BED SHEETS  ,Books,1,272.73,2025-04-02,East,Cancelled
+10,Mona Saleh,mona.saleh@example.com,Running Shoes,Toys,8,426.51,2025-04-18,Central,Refunded
+11,Mahmoud Nasser,mahmoud.nasser@example.com,  FICTION NOVEL  ,electronics,4,107.32,2025-01-03,South,Pending
+12,Dina Hassan,dina.hassan@example.com,  BOARD GAME  ,Toys,8,102.69,2025-04-26,Central,Refunded
+13,Mahmoud Kamel,mahmoud.kamel@example.com,Bluetooth Speaker,Toys,2,34.79,2025-04-07,North,Pending
+14,Mona Nasser,mona.nasser@example.com,Bed Sheets,Electronics,1,296.25,2025-04-06,,Completed
+15,Omar Kamel,,Garden Hose,Home & Garden,8,134.08,2025-03-07,Central,Refunded
+16,Dina El-Sayed,,Building Blocks,Books,3,33.14,2025-11-28,North,Completed
+17,Khaled El-Sayed,khaled.el-sayed@example.com,Cookware Set,Toys,6,421.14,2025-07-05,South,Cancelled
+18,Mona El-Sayed,mona.el-sayed@example.com,Office Chair,Electronics,2,245.63,2025-04-12,East,Completed
+19,Salma El-Sayed,salma.el-sayed@example.com,Bed Sheets,Home & Garden,2,423.01,2025-05-10,North,Pending
+20,Yasmin Saleh,yasmin.saleh@example.com,Bluetooth Speaker,Electronics,7,374.57,2025-03-24,South,Cancelled
+21,Laila Saleh,,Sunglasses,Books,3,197.97,2025-04-22,North,Cancelled
+22,Sherif Zaki,sherif.zaki@example.com,Notebook Set,Clothing,3,5209.69,2025-05-06,West,Pending
+23,Hassan Mostafa,hassan.mostafa@example.com,Fiction Novel,Home & Garden,5,370.68,2025-06-09,South,Refunded
+24,Rana Saleh,rana.saleh@example.com,Wireless Mouse,Electronics,5,86.93,2025-06-24,North,Refunded
+25,Mariam Mostafa,mariam.mostafa@example.com,Cookware Set,Electronics,4,168.99,2025-11-28,East,Cancelled
+26,Dina Kamel,dina.kamel@example.com,Bed Sheets,Clothing,4,193.84,2025-07-18,South,Cancelled
+27,Khaled Fahmy,khaled.fahmy@example.com,  FICTION NOVEL  ,Toys,4,233.94,2025-05-17,South,Completed
+28,Hassan Abdallah,hassan.abdallah@example.com,Backpack,Clothing,1,28.43,2025-07-21,North,Refunded
+29,Laila El-Sayed,laila.el-sayed@example.com,Desk Lamp,Sports,4,85.74,2025-02-15,North,Pending
+30,Dina Nasser,dina.nasser@example.com,Fitness Tracker,Sports,8,404.57,2025-11-09,East,Pending
+31,Mona Abdallah,mona.abdallah@example.com,  WINTER JACKET  ,Home & Garden,2,69.16,2025-07-14,South,Completed
+32,Rana Zaki,rana.zaki@example.com,Wireless Mouse,Books,7,218.83,2025-09-24,West,Refunded
+33,Yasmin Kamel,yasmin.kamel@example.com,Garden Hose,Home & Garden,7,,2025-07-19,Central,Completed
+34,Heba Ibrahim,,Garden Hose,Home & Garden,4,,2025-05-27,East,Refunded
+35,Mahmoud Mostafa,mahmoud.mostafa@example.com,Bluetooth Speaker,Electronics,4,3457.15,2025-08-23,North,Pending
+36,Karim Ibrahim,karim.ibrahim@example.com,Desk Lamp,Books,1,418.57,2025-12-07,West,Refunded
+37,Tarek Zaki,tarek.zaki@example.com,Office Chair,Electronics,6,243.47,2025-07-27,East,Completed
+38,Heba Ibrahim,heba.ibrahim@example.com,Fitness Tracker,toys,5,280.23,2025-12-19,West,Refunded
+39,Heba Mostafa,heba.mostafa@example.com,Office Chair,Books,7,156.69,2025-06-26,West,Pending
+40,Youssef El-Sayed,youssef.el-sayed@example.com,Backpack,Electronics,,326.27,2025-08-26,West,Refunded
+41,Mariam Fahmy,mariam.fahmy@example.com,Fitness Tracker,Home & Garden,7,448.51,2025-05-09,West,Cancelled
+42,Omar Mostafa,omar.mostafa@example.com,  BUILDING BLOCKS  ,home & garden,5,441.39,2025-05-01,East,Pending
+43,Tarek Ibrahim,tarek.ibrahim@example.com,Building Blocks,electronics,1,261.74,2025-05-28,South,Completed
+44,Ahmed Ibrahim,ahmed.ibrahim@example.com,Office Chair,Home & Garden,2,447.31,2025-09-13,Central,Pending
+45,Tarek Zaki,tarek.zaki@example.com,Table Lamp,Toys,2,426.83,2025-04-06,North,Pending
+46,Amr Abdallah,,Kids Bicycle,Toys,5,318.72,2025-07-04,East,Pending
+47,Mona El-Sayed,mona.el-sayed@example.com,  KIDS BICYCLE  ,Books,5,202.11,2025-09-18,West,Cancelled
+48,Dina Zaki,dina.zaki@example.com,Yoga Mat,Clothing,1,449.81,2025-08-17,North,Pending
+49,Amr Hassan,amr.hassan@example.com,Cookware Set,Home & Garden,6,304.2,2025-11-13,West,Cancelled
+50,Dina Hassan,dina.hassan@example.com,  GARDEN HOSE  ,Books,1,298.69,2025-10-25,South,Cancelled
+51,Laila Abdallah,laila.abdallah@example.com,Building Blocks,Electronics,1,438.13,2025-09-01,South,Cancelled
+52,Heba Hassan,heba.hassan@example.com,Running Shoes,Sports,5,232.92,2025-08-18,West,Pending
+53,Laila Hassan,laila.hassan@example.com,Cookware Set,Home & Garden,5,370.68,2025-03-15,Central,Refunded
+54,Heba Fahmy,heba.fahmy@example.com,Notebook Set,Books,7,111.23,2025-12-26,,Refunded
+55,Laila Nasser,laila.nasser@example.com,Running Shoes,books,6,392.41,2025-01-24,Central,Refunded
+56,Yasmin Fahmy,yasmin.fahmy@example.com,Garden Hose,Toys,2,384.48,2025-11-23,West,Cancelled
+57,Hassan Abdallah,hassan.abdallah@example.com,Yoga Mat,Sports,2,344.08,2025-01-02,South,Cancelled
+58,Hassan Saleh,hassan.saleh@example.com,Coffee Maker,Clothing,3,42.9,2025-10-05,South,Refunded
+59,Heba Abdallah,heba.abdallah@example.com,Coffee Maker,Electronics,8,425.79,2025-08-28,West,Cancelled
+60,Rana Zaki,rana.zaki@example.com,Kids Bicycle,Toys,5,17.7,2025-10-24,North,Completed
+61,Khaled Fahmy,khaled.fahmy@example.com,  BACKPACK  ,Books,,307.57,2025-11-21,South,Completed
+62,Laila Hassan,laila.hassan@example.com,Winter Jacket,Toys,7,85.63,2025-03-09,East,Cancelled
+63,Dina Hassan,dina.hassan@example.com,  YOGA MAT  ,Clothing,4,388.18,2025-02-26,Central,Cancelled
+64,Yasmin Zaki,yasmin.zaki@example.com,Sunglasses,Electronics,4,216.39,2025-11-03,East,Pending
+65,Karim Ibrahim,,Bluetooth Speaker,Home & Garden,8,59.33,2025-06-22,West,Refunded
+66,Laila Kamel,laila.kamel@example.com,Building Blocks,Books,7,423.06,2025-08-08,South,Refunded
+67,Mahmoud El-Sayed,mahmoud.el-sayed@example.com,Backpack,Electronics,8,48.52,2025-06-08,North,Completed
+68,Youssef Mostafa,youssef.mostafa@example.com,Notebook Set,Home & Garden,3,356.58,2025-09-09,South,Pending
+69,Mahmoud Mostafa,mahmoud.mostafa@example.com,Wireless Mouse,Clothing,5,31.16,2025-08-25,North,Refunded
+70,Khaled El-Sayed,khaled.el-sayed@example.com,  FITNESS TRACKER  ,home & garden,8,292.36,2025-11-04,West,Refunded
+71,Khaled Ibrahim,,Board Game,Books,6,176.36,2025-02-26,Central,Refunded
+72,Nour Kamel,nour.kamel@example.com,Notebook Set,Sports,6,373.72,2025-06-22,East,Refunded
+73,Mona Hassan,mona.hassan@example.com,Desk Lamp,Toys,6,366.8,2025-11-04,Central,Cancelled
+74,Ahmed Abdallah,ahmed.abdallah@example.com,Sunglasses,Electronics,4,76.39,2025-02-25,East,Cancelled
+75,Khaled Zaki,khaled.zaki@example.com,Bed Sheets,Electronics,5,20.8,2025-01-06,East,Cancelled
+76,Sara Hassan,sara.hassan@example.com,Backpack,Sports,7,208.51,2025-01-05,East,Completed
+77,Sherif Nasser,sherif.nasser@example.com,Cookware Set,home & garden,4,341.68,2025-09-22,East,Refunded
+78,Nour Abdallah,nour.abdallah@example.com,  RUNNING SHOES  ,Home & Garden,5,5241.04,2025-09-18,West,Pending
+79,Ahmed Kamel,,Yoga Mat,Home & Garden,7,261.44,2025-01-11,North,Refunded
+80,Mahmoud Hassan,mahmoud.hassan@example.com,Desk Lamp,Clothing,7,268.28,2025-04-11,East,Cancelled
+81,Nour Fahmy,nour.fahmy@example.com,Running Shoes,Clothing,2,72.73,2025-11-16,North,Pending
+82,Mariam Zaki,mariam.zaki@example.com,  WINTER JACKET  ,Clothing,8,38.18,2025-06-17,East,Completed
+83,Tarek Hassan,tarek.hassan@example.com,Yoga Mat,Books,7,212.52,2025-10-21,North,Refunded
+84,Heba Hassan,heba.hassan@example.com,Winter Jacket,Toys,2,231.01,2025-09-17,West,Refunded
+85,Dina Zaki,,Winter Jacket,Electronics,6,49.77,2025-06-03,Central,Pending
+86,Rana Ibrahim,rana.ibrahim@example.com,Yoga Mat,Home & Garden,7,292.42,2025-11-22,Central,Completed
+87,Nour Fahmy,nour.fahmy@example.com,Building Blocks,Clothing,4,449.99,2025-11-11,North,Completed
+88,Omar Zaki,omar.zaki@example.com,Coffee Maker,Toys,8,27.31,2025-12-26,West,Cancelled
+89,Amr Mostafa,amr.mostafa@example.com,  OFFICE CHAIR  ,Sports,8,348.09,2025-04-26,West,Pending
+90,Mahmoud Saleh,mahmoud.saleh@example.com,Fitness Tracker,Electronics,5,45.07,2025-07-03,Central,Pending
+91,Sara Kamel,,  FITNESS TRACKER  ,Home & Garden,4,178.69,2025-12-21,East,Completed
+92,Amr Ibrahim,amr.ibrahim@example.com,  BUILDING BLOCKS  ,Sports,1,3646.96,2025-02-25,Central,Refunded
+93,Khaled Nasser,,Building Blocks,Books,1,287.32,2025-01-20,East,Refunded
+94,Salma Fahmy,,Fitness Tracker,Books,1,180.58,2025-12-01,East,Cancelled
+95,Karim Zaki,karim.zaki@example.com,Winter Jacket,Clothing,1,163.72,2025-11-06,West,Refunded
+96,Tarek Mostafa,,Backpack,Electronics,6,420.55,2025-05-02,Central,Refunded
+97,Dina Abdallah,dina.abdallah@example.com,Sunglasses,sports,7,336.54,2025-12-16,South,Refunded
+98,Sherif Hassan,sherif.hassan@example.com,Coffee Maker,books,5,149.98,2025-10-23,East,Refunded
+99,Mahmoud Zaki,mahmoud.zaki@example.com,  BOARD GAME  ,toys,1,41.17,2025-03-28,South,Completed
+100,Mahmoud Fahmy,mahmoud.fahmy@example.com,Office Chair,Electronics,3,308.15,2025-09-12,North,Pending
+101,Omar Nasser,omar.nasser@example.com,  BED SHEETS  ,Electronics,5,350.53,2025-12-16,Central,Cancelled
+102,Heba Hassan,heba.hassan@example.com,Winter Jacket,Toys,6,321.62,2025-12-23,East,Pending
+103,Karim Mostafa,karim.mostafa@example.com,Notebook Set,Sports,1,167.52,2025-10-03,Central,Pending
+104,Sherif Kamel,sherif.kamel@example.com,  YOGA MAT  ,Clothing,6,291.91,2025-09-21,East,Pending
+105,Ahmed Hassan,ahmed.hassan@example.com,Kids Bicycle,Clothing,3,150.62,2025-02-09,Central,Cancelled
+106,Khaled Saleh,khaled.saleh@example.com,Coffee Maker,Books,,83.67,2025-01-03,East,Completed
+107,Mariam Kamel,mariam.kamel@example.com,Wireless Mouse,Sports,5,291.72,2025-08-03,West,Cancelled
+108,Dina Zaki,dina.zaki@example.com,Winter Jacket,toys,6,439.12,2025-06-08,Central,Completed
+109,Tarek Kamel,tarek.kamel@example.com,Cookware Set,clothing,3,367.56,2025-08-17,South,Pending
+110,Rana Saleh,rana.saleh@example.com,Notebook Set,Clothing,6,29.51,2025-09-01,West,Cancelled
+111,Rana Fahmy,,  BLUETOOTH SPEAKER  ,Books,4,168.24,2025-10-22,West,Cancelled
+112,Dina Saleh,dina.saleh@example.com,  RUNNING SHOES  ,Clothing,7,229.03,2025-09-15,East,Refunded
+113,Dina Ibrahim,dina.ibrahim@example.com,  TABLE LAMP  ,Toys,,270.43,2025-08-27,West,Cancelled
+114,Tarek El-Sayed,tarek.el-sayed@example.com,Board Game,Toys,4,,2025-03-27,Central,Refunded
+115,Sara Nasser,sara.nasser@example.com,Running Shoes,Sports,4,189.39,2025-09-07,North,Pending
+116,Omar Nasser,omar.nasser@example.com,Winter Jacket,Books,6,306.73,2025-04-08,East,Refunded
+117,Tarek Mostafa,tarek.mostafa@example.com,Building Blocks,Home & Garden,8,162.17,2025-02-19,East,Cancelled
+118,Laila Abdallah,,Yoga Mat,Home & Garden,8,297.94,2025-09-23,Central,Cancelled
+119,Ahmed Saleh,ahmed.saleh@example.com,Notebook Set,Electronics,2,190.68,2025-09-06,South,Completed
+120,Nour Abdallah,nour.abdallah@example.com,Bluetooth Speaker,Electronics,4,244.54,2025-03-02,South,Refunded
+112,Dina Saleh,dina.saleh@example.com,  RUNNING SHOES  ,Clothing,7,229.03,2025-09-15,East,Refunded
+119,Ahmed Saleh,ahmed.saleh@example.com,Notebook Set,Electronics,2,190.68,2025-09-06,South,Completed
+38,Heba Ibrahim,heba.ibrahim@example.com,Fitness Tracker,toys,5,280.23,2025-12-19,West,Refunded
+113,Dina Ibrahim,dina.ibrahim@example.com,  TABLE LAMP  ,Toys,,270.43,2025-08-27,West,Cancelled
