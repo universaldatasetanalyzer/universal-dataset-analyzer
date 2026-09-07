@@ -1,11 +1,35 @@
 const { Pool } = require('pg');
 
+const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_URL_POOLED;
+const databaseInfo = databaseUrl
+  ? (() => {
+      const url = new URL(databaseUrl);
+      return {
+        host: url.hostname,
+        port: url.port || '5432',
+        database: url.pathname.replace(/^\//, ''),
+      };
+    })()
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || '5432',
+      database: process.env.DB_NAME || 'uda_db',
+    };
+const poolConfig = databaseUrl
+  ? {
+      connectionString: databaseUrl,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    }
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      database: process.env.DB_NAME || 'uda_db',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD,
+    };
+
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'uda_db',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD,
+  ...poolConfig,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
@@ -40,4 +64,4 @@ async function getClient() {
   return client;
 }
 
-module.exports = { query, getClient, pool };
+module.exports = { query, getClient, pool, databaseInfo };

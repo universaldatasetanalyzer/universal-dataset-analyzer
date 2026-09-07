@@ -8,6 +8,7 @@ const path = require('path');
 const routes = require('./routes');
 const { errorHandler, notFound } = require('./middleware/errors');
 const { paddleWebhook } = require('./controllers/billing');
+const { databaseInfo } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -96,7 +97,7 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🗄️  Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+  console.log(`🗄️  Database: ${databaseInfo.host}:${databaseInfo.port}/${databaseInfo.database}`);
 });
 
 module.exports = app;
