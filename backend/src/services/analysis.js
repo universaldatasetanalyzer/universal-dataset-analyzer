@@ -1,14 +1,23 @@
 const fetch = require('node-fetch');
+const fs = require('fs');
+const FormData = require('form-data');
 const { query } = require('../db');
 const { createNotification } = require('./notifications');
 
 const PYTHON_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
-async function callPython(endpoint, body) {
+async function callPython(endpoint, filePath, fields) {
+  const form = new FormData();
+  form.append('file', fs.createReadStream(filePath));
+
+  for (const [key, value] of Object.entries(fields)) {
+    form.append(key, typeof value === 'string' ? value : JSON.stringify(value));
+  }
+
   const response = await fetch(`${PYTHON_URL}${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: form.getHeaders(),
+    body: form,
     timeout: 120000,
   });
 
@@ -27,7 +36,7 @@ async function analyzeDataset(datasetId, filePath, format) {
     await query('UPDATE datasets SET status = $1 WHERE id = $2', ['processing', datasetId]);
 
     // Call Python microservice for full analysis
-    const result = await callPython('/analyze', { filePath, format, datasetId });
+    const result = await callPython('/analyze', filePath, { format, datasetId });
 
     // Store summary
     await query(
@@ -89,12 +98,16 @@ async function analyzeDataset(datasetId, filePath, format) {
 }
 
 async function cleanDataset(datasetId, filePath, operations) {
-  const result = await callPython('/clean', { filePath, operations, datasetId });
+  const result = await callPython('/clean', filePath, {
+    operations,
+    datasetId,
+    format: require('path').extname(filePath).slice(1),
+  });
   return result;
 }
 
 async function generateInsights(datasetId, filePath, summaryData) {
-  const result = await callPython('/insights', { filePath, summaryData, datasetId });
+  const result = await callPython('/insights', filePath, { summaryData, datasetId });
   return result;
 }
 

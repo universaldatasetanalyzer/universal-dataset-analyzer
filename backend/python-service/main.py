@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
@@ -6,6 +6,9 @@ import pandas as pd
 import numpy as np
 import os
 import uuid
+import json
+import tempfile
+import shutil
 from pathlib import Path
 
 app = FastAPI(title="UDA Analysis Service", version="1.0.0")
@@ -34,6 +37,18 @@ class InsightsRequest(BaseModel):
     filePath: str
     summaryData: Dict[str, Any]
     datasetId: str
+
+
+async def save_upload(upload: UploadFile) -> str:
+    suffix = Path(upload.filename or '').suffix
+    temp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    try:
+        with temp:
+            while chunk := await upload.read(1024 * 1024):
+                temp.write(chunk)
+    finally:
+        await upload.close()
+    return temp.name
 
 # ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -413,10 +428,14 @@ def health():
 
 
 @app.post("/analyze")
-def analyze(req: AnalyzeRequest):
+async def analyze(
+    file: UploadFile = File(...),
+    format: str = Form(...),
+    datasetId: str = Form(...),
+):
+    temp_path = await save_upload(file)
     try:
-        resolved_path = normalize_file_path(req.filePath)
-        df = load_dataframe(resolved_path, req.format)
+        df = load_dataframe(temp_path, format)
         rows, cols = df.shape
 
         # ── Column analysis ───────────────────────────────────────────────────
@@ -503,8 +522,8 @@ def analyze(req: AnalyzeRequest):
             "columnCount":     cols,
             "columns":         columns,
             "typeDistribution": type_counts,
-            "format":          req.format,
-            "fileSize":        os.path.getsize(resolved_path) if os.path.exists(resolved_path) else 0,
+            "format":          format,
+            "fileSize":        os.path.getsize(temp_path),
             "memoryUsage":     int(df.memory_usage(deep=True).sum()),
         }
 
@@ -533,20 +552,24 @@ def analyze(req: AnalyzeRequest):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        os.unlink(temp_path)
 
 
 @app.post("/clean")
-def clean(req: CleanRequest):
+async def clean(
+    file: UploadFile = File(...),
+    operations: str = Form(...),
+    datasetId: str = Form(...),
+    format: str = Form(...),
+):
+    temp_path = await save_upload(file)
     try:
-        # BUG FIX: الكود القديم كان بيستخدم req.filePath مباشرة في load_dataframe
-        # من غير ما يعمل normalize — ده كان بيسبب errors على Windows paths
-        resolved_path = normalize_file_path(req.filePath)
-        fmt = Path(resolved_path).suffix.lstrip('.')
-        df  = load_dataframe(resolved_path, fmt)
+        ops = json.loads(operations)
+        df  = load_dataframe(temp_path, format)
 
         original_rows = len(df)
         original_cols = len(df.columns)
-        ops     = req.operations
         applied = []
 
         # ── Fill missing values ───────────────────────────────────────────────
@@ -689,12 +712,12 @@ def clean(req: CleanRequest):
             "colsRemoved":  original_cols - final_cols,   # BUG FIX إضافة
         }
 
-        if not req.preview:
-            clean_dir  = os.path.dirname(resolved_path)
-            clean_name = f"cleaned_{uuid.uuid4().hex[:8]}_{Path(resolved_path).name}"
+        if not ops.get("preview", False):
+            clean_dir  = os.path.dirname(temp_path)
+            clean_name = f"cleaned_{uuid.uuid4().hex[:8]}_{Path(file.filename or 'dataset').name}"
             clean_path = os.path.join(clean_dir, clean_name)
 
-            suffix = Path(resolved_path).suffix.lower()
+            suffix = Path(file.filename or '').suffix.lower()
             if suffix in ('.xlsx', '.xls'):
                 df.to_excel(clean_path, index=False)
             else:
@@ -709,10 +732,38 @@ def clean(req: CleanRequest):
 
         return result
 
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid operations JSON: {e.msg}")
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        os.unlink(temp_path)
+
+
+@app.post("/insights")
+async def insights(
+    file: UploadFile = File(...),
+    summaryData: str = Form(...),
+    datasetId: str = Form(...),
+):
+    temp_path = await save_upload(file)
+    try:
+        summary = json.loads(summaryData)
+        df = load_dataframe(temp_path, Path(file.filename or '').suffix.lstrip('.'))
+        return {
+            "summaryData": summary,
+            "rowCount": len(df),
+            "columnCount": len(df.columns),
+            "datasetId": datasetId,
+        }
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid summaryData JSON: {e.msg}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        os.unlink(temp_path)
 
 
 if __name__ == "__main__":
