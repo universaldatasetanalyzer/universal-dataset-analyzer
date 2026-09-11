@@ -84,6 +84,12 @@ const insights = require('../controllers/insights');
 router.get('/insights/:datasetId',            authenticate, insights.getInsights);
 router.post('/insights/:datasetId/regenerate', authenticate, insights.regenerateInsights);
 
+// ── Notifications ────────────────────────────────────────────────────────────
+const notifications = require('../controllers/notifications');
+router.get('/notifications',                 authenticate, notifications.listNotifications);
+router.patch('/notifications/:id/read',      authenticate, notifications.markRead);
+router.patch('/notifications/read-all',      authenticate, notifications.markAllRead);
+
 // ── Reports ───────────────────────────────────────────────────────────────────
 const reports = require('../controllers/reports');
 router.get('/reports',                        authenticate, reports.getReports);
