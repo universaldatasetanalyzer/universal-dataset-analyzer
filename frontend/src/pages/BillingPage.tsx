@@ -60,7 +60,8 @@ export const BillingPage: React.FC = () => {
     setBusyTier(tier.name);
     setError('');
     try {
-      await openCheckout(priceId, authUser.email, authUser.id);
+      const { transactionId } = await billingApi.createCheckoutSession(priceId);
+      await openCheckout(transactionId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to open Paddle Checkout.');
     } finally {

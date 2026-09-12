@@ -2,6 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const upload  = require('../middleware/upload');
+const rateLimits = require('../middleware/rateLimits');
+const { requirePaidPlan } = require('../middleware/billing');
 const { query } = require('../db');
 
 // ── Role check helper ─────────────────────────────────────────────────────────
@@ -50,15 +52,15 @@ const auth = require('../controllers/auth');
 router.post('/auth/register',       auth.register);
 router.post('/auth/login',          auth.login);
 router.get('/auth/me',              authenticate, auth.me);
-router.post('/auth/forgot-password', auth.forgotPassword);
+router.post('/auth/forgot-password', rateLimits.passwordReset, auth.forgotPassword);
 router.get('/auth/google',          auth.googleAuth);
 router.get('/auth/google/callback', auth.googleCallback);
-router.post('/auth/reset-password', auth.resetPassword);
+router.post('/auth/reset-password', rateLimits.passwordReset, auth.resetPassword);
 
 // ── Datasets ──────────────────────────────────────────────────────────────────
 const datasets = require('../controllers/datasets');
 router.get('/datasets',                       authenticate, datasets.getDatasets);
-router.post('/datasets/upload',               authenticate, requirePermission('upload'), upload.single('file'), datasets.uploadDataset);
+router.post('/datasets/upload',               authenticate, requirePaidPlan, rateLimits.uploads, requirePermission('upload'), upload.single('file'), datasets.uploadDataset);
 router.get('/datasets/:id',                   authenticate, datasets.getDataset);
 router.delete('/datasets/:id',                authenticate, requirePermission('delete'), datasets.deleteDataset);
 router.get('/datasets/:id/summary',           authenticate, datasets.getSummary);
@@ -76,13 +78,13 @@ const chat = require('../controllers/chat');
 router.get('/chat/sessions',                  authenticate, chat.getSessions);
 router.post('/chat/sessions',                 authenticate, chat.createSession);
 router.get('/chat/sessions/:id',              authenticate, chat.getSession);
-router.post('/chat/sessions/:id/messages',    authenticate, chat.sendMessage);
+router.post('/chat/sessions/:id/messages',    authenticate, rateLimits.chat, chat.sendMessage);
 router.delete('/chat/sessions/:id',           authenticate, chat.deleteSession);
 
 // ── Insights ──────────────────────────────────────────────────────────────────
 const insights = require('../controllers/insights');
 router.get('/insights/:datasetId',            authenticate, insights.getInsights);
-router.post('/insights/:datasetId/regenerate', authenticate, insights.regenerateInsights);
+router.post('/insights/:datasetId/regenerate', authenticate, rateLimits.insights, insights.regenerateInsights);
 
 // ── Notifications ────────────────────────────────────────────────────────────
 const notifications = require('../controllers/notifications');
@@ -93,14 +95,14 @@ router.patch('/notifications/read-all',      authenticate, notifications.markAll
 // ── Reports ───────────────────────────────────────────────────────────────────
 const reports = require('../controllers/reports');
 router.get('/reports',                        authenticate, reports.getReports);
-router.post('/reports',                       authenticate, requirePermission('reports'), reports.generateReport);
+router.post('/reports',                       authenticate, requirePaidPlan, rateLimits.reports, requirePermission('reports'), reports.generateReport);
 router.get('/reports/:id/download',           authenticate, reports.downloadReport);
 router.delete('/reports/:id',                 authenticate, requirePermission('delete'), reports.deleteReport);
 
 // ── Team ──────────────────────────────────────────────────────────────────────
 const team = require('../controllers/team');
 router.get('/team',                           authenticate, team.getTeam);
-router.post('/team/invite',                   authenticate, requirePermission('team'), team.inviteMember);
+router.post('/team/invite',                   authenticate, rateLimits.invites, requirePermission('team'), team.inviteMember);
 router.get('/team/invite/:token',             optionalAuth, team.acceptInvite);
 router.patch('/team/members/:memberId',       authenticate, requirePermission('team'), team.updateMember);
 router.delete('/team/members/:memberId',      authenticate, requirePermission('team'), team.removeMember);
@@ -110,6 +112,7 @@ const billing = require('../controllers/billing');
 const portal = require('../controllers/portal');
 router.get('/billing',                        authenticate, requirePermission('billing'), billing.getBilling);
 router.get('/billing/checkout-config',       authenticate, billing.getCheckoutConfig);
+router.post('/billing/create-checkout-session', authenticate, rateLimits.checkout, billing.createCheckoutSession);
 router.post('/billing/change-plan',           authenticate, requirePermission('billing'), billing.changePlan);
 router.post('/billing/cancel',                authenticate, billing.cancelSubscription);
 router.post('/billing/portal-session',        authenticate, portal.createPortalSession);

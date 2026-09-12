@@ -45,12 +45,10 @@ export async function previewPrices(priceIds: string[], countryCode?: string): P
   });
 }
 
-export async function openCheckout(priceId: string, email: string, userId: string): Promise<void> {
+export async function openCheckout(transactionId: string): Promise<void> {
   const paddle = await getPaddle();
   paddle.Checkout.open({
-    items: [{ priceId, quantity: 1 }],
-    customer: { email },
-    customData: { userId },
+    transactionId,
     settings: {
       displayMode: 'overlay',
       variant: 'one-page',

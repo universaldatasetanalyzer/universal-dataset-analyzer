@@ -66,6 +66,26 @@ async function getCheckoutConfig(req, res, next) {
   }
 }
 
+async function createCheckoutSession(req, res, next) {
+  try {
+    const { priceId } = req.body || {};
+    const configuredPriceIds = [PRO_PRICE.monthly.priceId, PRO_PRICE.yearly.priceId].filter(Boolean);
+    if (!priceId || !configuredPriceIds.includes(priceId)) {
+      return res.status(400).json({ error: 'Invalid Paddle price ID' });
+    }
+
+    const transaction = await paddleService.createCheckoutTransaction({
+      priceId,
+      userId: req.user.id,
+      email: req.user.email,
+    });
+
+    res.json({ transactionId: transaction.id });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function paddleWebhook(req, res) {
   try {
     const signature = req.headers['paddle-signature'];
@@ -99,45 +119,7 @@ async function cancelSubscription(req, res, next) {
 }
 
 async function changePlan(req, res, next) {
-  try {
-    const { plan } = req.body;
-    if (!['free', 'pro'].includes(plan)) {
-      return res.status(400).json({ error: 'Plan must be free or pro' });
-    }
-
-    const orgResult = await query(
-      `SELECT o.id
-       FROM organizations o
-       JOIN org_members om ON om.org_id = o.id
-       WHERE om.user_id = $1 AND om.role IN ('owner', 'admin')
-       LIMIT 1`,
-      [req.user.id]
-    );
-
-    if (orgResult.rows.length === 0) {
-      return res.status(403).json({ error: 'You must be an owner or admin to change the plan' });
-    }
-
-    const orgId = orgResult.rows[0].id;
-    const currentPlan = await getUserPlan(req.user.id);
-
-    await query(
-      `INSERT INTO subscriptions (user_id, org_id, plan, status, updated_at)
-       VALUES ($1, $2, $3, 'active', NOW())
-       ON CONFLICT (user_id, org_id) DO UPDATE
-       SET plan = EXCLUDED.plan,
-           status = 'active',
-           updated_at = NOW()`,
-      [req.user.id, orgId, plan]
-    );
-
-    res.json({
-      message: `Plan updated from ${currentPlan} to ${plan}`,
-      plan,
-    });
-  } catch (err) {
-    next(err);
-  }
+  res.status(403).json({ error: 'Manual plan changes are disabled. Plans are updated from verified Paddle webhooks.' });
 }
 
-module.exports = { getBilling, getCheckoutConfig, paddleWebhook, cancelSubscription, changePlan };
+module.exports = { getBilling, getCheckoutConfig, createCheckoutSession, paddleWebhook, cancelSubscription, changePlan };

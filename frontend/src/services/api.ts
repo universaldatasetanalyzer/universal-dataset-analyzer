@@ -256,6 +256,11 @@ export const billingApi = {
 
   getCheckoutConfig: () => request<{ countryCode?: string }>('/billing/checkout-config'),
 
+  createCheckoutSession: (priceId: string) =>
+    request<{ transactionId: string }>('/billing/create-checkout-session', {
+      method: 'POST', body: { priceId },
+    }),
+
   cancel: () => request<{ message: string }>('/billing/cancel', { method: 'POST' }),
 };
 
