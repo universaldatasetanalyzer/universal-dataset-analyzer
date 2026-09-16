@@ -215,10 +215,10 @@ export const chatApi = {
 // ─── Insights ─────────────────────────────────────────────────────────────────
 
 export const insightsApi = {
-  get: (datasetId: string) => request<InsightsData>(`/insights/${datasetId}`),
+  get: (datasetId: string, language: 'en' | 'ar' = 'en') => request<InsightsData>(`/insights/${datasetId}?language=${language}`),
 
-  regenerate: (datasetId: string) =>
-    request<InsightsData>(`/insights/${datasetId}/regenerate`, { method: 'POST' }),
+  regenerate: (datasetId: string, language: 'en' | 'ar' = 'en') =>
+    request<InsightsData>(`/insights/${datasetId}/regenerate?language=${language}`, { method: 'POST' }),
 };
 
 // ─── Reports ──────────────────────────────────────────────────────────────────

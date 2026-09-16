@@ -5,6 +5,7 @@ import {
   Database, BarChart3, Sparkles, ShieldCheck, Wand2, MessageSquare,
   Check, ChevronDown, ChevronUp, ArrowRight, Zap, Menu, X
 } from 'lucide-react';
+import { useStore } from '../store';
 
 const fadeUp = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0 } };
 
@@ -25,9 +26,20 @@ const FAQS = [
   { q: 'What\'s the maximum file size?', a: 'The Pro plan supports files up to 500MB per upload.' },
 ];
 
+const ARABIC_FEATURE_TEXT: Record<string, { title: string; desc: string }> = {
+  'Smart Data Ingestion': { title: 'إدخال ذكي للبيانات', desc: 'ارفع ملفات CSV وExcel وJSON وParquet مع اكتشاف المخطط والتحقق من الأنواع تلقائيًا.' },
+  'Quality Analysis': { title: 'تحليل الجودة', desc: 'اكتشف القيم المفقودة والقيم الشاذة والتكرارات وأخطاء التنسيق مع درجة صحة شاملة.' },
+  'AI Cleaning Wizard': { title: 'مساعد التنظيف الذكي', desc: 'احصل على توصيات ذكية وطبّق إجراءات التنظيف بنقرة واحدة مع معاينة قبل وبعد.' },
+  'Interactive Charts': { title: 'رسوم بيانية تفاعلية', desc: 'مخططات توزيع وتبعثر وخرائط حرارية ورسوم صندوقية مع فلاتر ذكية.' },
+  'AI-Powered Insights': { title: 'رؤى بالذكاء الاصطناعي', desc: 'تحليل مدعوم بالذكاء الاصطناعي لاكتشاف الاتجاهات والحالات الشاذة والارتباطات.' },
+  'Chat with Your Data': { title: 'تحدث مع بياناتك', desc: 'اطرح أسئلتك بلغة بسيطة واحصل على إجابات فورية مع الرسوم والملخصات.' },
+};
+
 export const LandingPage: React.FC = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const { language, toggleLanguage } = useStore();
+  const isArabic = language === 'ar';
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100 overflow-x-hidden">
@@ -41,13 +53,16 @@ export const LandingPage: React.FC = () => {
             <span className="font-display font-bold text-sm">Universal<span className="text-brand-500">Analyzer</span></span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-surface-600 dark:text-surface-400">
-            {['Features', 'Pricing', 'FAQ'].map(item => (
-              <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-surface-900 dark:hover:text-surface-100 transition-colors">{item}</a>
+            {(isArabic ? ['المزايا', 'الأسعار', 'الأسئلة الشائعة'] : ['Features', 'Pricing', 'FAQ']).map(item => (
+              <a key={item} href={`#${item === 'المزايا' ? 'features' : item === 'الأسعار' ? 'pricing' : item === 'الأسئلة الشائعة' ? 'faq' : item.toLowerCase()}`} className="hover:text-surface-900 dark:hover:text-surface-100 transition-colors">{item}</a>
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/login" className="hidden md:block text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100">Sign in</Link>
-            <Link to="/register" className="btn-primary text-sm px-4 py-2">Get Started Free</Link>
+            <button onClick={toggleLanguage} className="text-sm font-semibold text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100">
+              {isArabic ? 'English' : 'العربية'}
+            </button>
+            <Link to="/login" className="hidden md:block text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100">{isArabic ? 'تسجيل الدخول' : 'Sign in'}</Link>
+            <Link to="/register" className="btn-primary text-sm px-4 py-2">{isArabic ? 'ابدأ مجانًا' : 'Get Started Free'}</Link>
             <button className="md:hidden" onClick={() => setMobileMenu(!mobileMenu)}>
               {mobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -55,8 +70,8 @@ export const LandingPage: React.FC = () => {
         </div>
         {mobileMenu && (
           <div className="md:hidden px-6 pb-4 space-y-2 border-t border-surface-200 dark:border-surface-800 pt-4">
-            {['Features', 'Pricing', 'FAQ'].map(item => (
-              <a key={item} href={`#${item.toLowerCase()}`} onClick={() => setMobileMenu(false)} className="block text-sm py-2 text-surface-600 dark:text-surface-400">{item}</a>
+            {(isArabic ? ['المزايا', 'الأسعار', 'الأسئلة الشائعة'] : ['Features', 'Pricing', 'FAQ']).map(item => (
+              <a key={item} href={`#${item === 'المزايا' ? 'features' : item === 'الأسعار' ? 'pricing' : item === 'الأسئلة الشائعة' ? 'faq' : item.toLowerCase()}`} onClick={() => setMobileMenu(false)} className="block text-sm py-2 text-surface-600 dark:text-surface-400">{item}</a>
             ))}
           </div>
         )}
@@ -70,23 +85,23 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-4xl mx-auto text-center relative">
           <motion.div initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: 0.1 } } }}>
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-400 text-sm font-medium mb-6">
-              <Zap className="w-3.5 h-3.5" /> Now with AI-powered insights
+              <Zap className="w-3.5 h-3.5" /> {isArabic ? 'الآن مع رؤى مدعومة بالذكاء الاصطناعي' : 'Now with AI-powered insights'}
             </motion.div>
             <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl font-display font-bold leading-tight mb-6">
-              Analyze Any Dataset
+              {isArabic ? 'حلّل أي مجموعة بيانات' : 'Analyze Any Dataset'}
               <span className="block bg-gradient-to-r from-brand-500 to-accent-500 bg-clip-text text-transparent">
-                in Minutes
+                {isArabic ? 'خلال دقائق' : 'in Minutes'}
               </span>
             </motion.h1>
             <motion.p variants={fadeUp} className="text-lg text-surface-500 dark:text-surface-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-              Upload your CSV, Excel, or JSON files and instantly get quality reports, AI insights, beautiful visualizations, and a chat interface to query your data.
+              {isArabic ? 'ارفع ملفات CSV أو Excel أو JSON واحصل فورًا على تقارير الجودة ورؤى الذكاء الاصطناعي ورسوم بيانية واضحة وواجهة محادثة للاستعلام عن بياناتك.' : 'Upload your CSV, Excel, or JSON files and instantly get quality reports, AI insights, beautiful visualizations, and a chat interface to query your data.'}
             </motion.p>
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link to="/register" className="btn-primary text-base px-8 py-3.5 flex items-center gap-2">
-                Start for Free <ArrowRight className="w-4 h-4" />
+                {isArabic ? 'ابدأ مجانًا' : 'Start for Free'} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link to="/dashboard" className="btn-secondary text-base px-8 py-3.5">
-                View Live Demo
+                {isArabic ? 'شاهد العرض التجريبي' : 'View Live Demo'}
               </Link>
             </motion.div>
           </motion.div>
@@ -115,9 +130,9 @@ export const LandingPage: React.FC = () => {
       <section id="features" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-brand-500 font-semibold text-sm mb-3 uppercase tracking-wider">Features</p>
-            <h2 className="text-4xl font-display font-bold mb-4">Everything you need to analyze data</h2>
-            <p className="text-surface-500 max-w-xl mx-auto">From upload to insight in minutes. No SQL, no Python required.</p>
+            <p className="text-brand-500 font-semibold text-sm mb-3 uppercase tracking-wider">{isArabic ? 'المزايا' : 'Features'}</p>
+            <h2 className="text-4xl font-display font-bold mb-4">{isArabic ? 'كل ما تحتاجه لتحليل البيانات' : 'Everything you need to analyze data'}</h2>
+            <p className="text-surface-500 max-w-xl mx-auto">{isArabic ? 'من الرفع إلى الرؤية خلال دقائق، دون الحاجة إلى SQL أو Python.' : 'From upload to insight in minutes. No SQL, no Python required.'}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f, i) => (
@@ -126,8 +141,8 @@ export const LandingPage: React.FC = () => {
                   <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center text-white mb-4`}>
                     {f.icon}
                   </div>
-                  <h3 className="font-display font-semibold text-base mb-2">{f.title}</h3>
-                  <p className="text-sm text-surface-500 leading-relaxed">{f.desc}</p>
+                  <h3 className="font-display font-semibold text-base mb-2">{isArabic ? ARABIC_FEATURE_TEXT[f.title].title : f.title}</h3>
+                  <p className="text-sm text-surface-500 leading-relaxed">{isArabic ? ARABIC_FEATURE_TEXT[f.title].desc : f.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -139,8 +154,8 @@ export const LandingPage: React.FC = () => {
       <section id="pricing" className="py-24 px-6 bg-surface-100/50 dark:bg-surface-900/50">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <p className="text-brand-500 font-semibold text-sm mb-3 uppercase tracking-wider">Pricing</p>
-            <h2 className="text-4xl font-display font-bold mb-4">Simple, transparent pricing</h2>
+            <p className="text-brand-500 font-semibold text-sm mb-3 uppercase tracking-wider">{isArabic ? 'الأسعار' : 'Pricing'}</p>
+            <h2 className="text-4xl font-display font-bold mb-4">{isArabic ? 'أسعار بسيطة وواضحة' : 'Simple, transparent pricing'}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {[
@@ -171,7 +186,7 @@ export const LandingPage: React.FC = () => {
       <section id="faq" className="py-24 px-6 bg-surface-100/50 dark:bg-surface-900/50">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-display font-bold mb-4">Frequently asked questions</h2>
+            <h2 className="text-4xl font-display font-bold mb-4">{isArabic ? 'الأسئلة الشائعة' : 'Frequently asked questions'}</h2>
           </div>
           <div className="space-y-2">
             {FAQS.map((faq, i) => (
@@ -197,10 +212,10 @@ export const LandingPage: React.FC = () => {
       <section className="py-24 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <div className="card p-12 bg-gradient-to-br from-brand-600 to-accent-600 border-0 text-white">
-            <h2 className="text-4xl font-display font-bold mb-4">Start analyzing your data today</h2>
-            <p className="text-white/80 mb-8">Join thousands of analysts and data scientists who trust Universal Analyzer.</p>
+            <h2 className="text-4xl font-display font-bold mb-4">{isArabic ? 'ابدأ تحليل بياناتك اليوم' : 'Start analyzing your data today'}</h2>
+            <p className="text-white/80 mb-8">{isArabic ? 'انضم إلى آلاف المحللين وعلماء البيانات الذين يثقون في Universal Analyzer.' : 'Join thousands of analysts and data scientists who trust Universal Analyzer.'}</p>
             <Link to="/register" className="inline-flex items-center gap-2 bg-white text-brand-700 font-semibold px-8 py-3.5 rounded-xl hover:bg-brand-50 transition-colors">
-              Get Started Free <ArrowRight className="w-4 h-4" />
+              {isArabic ? 'ابدأ مجانًا' : 'Get Started Free'} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>

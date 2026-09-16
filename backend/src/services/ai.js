@@ -76,6 +76,8 @@ async function generateAIInsights(datasetContext) {
 
   const prompt = `You are an expert decision intelligence analyst. Analyze the dataset summary below and produce useful, evidence-based decisions for the dataset owner. First infer the dataset domain (sales, marketing, finance, operations, HR, healthcare, education, etc.) from the column names and values. Do not assume it is sales. Discover the strongest opportunities, risks, segments, time windows, thresholds, and next actions yourself.
 
+${datasetContext.language === 'ar' ? 'Write every human-readable field in Modern Standard Arabic. Keep dataset names, column names, numbers, and technical identifiers unchanged.' : 'Write every human-readable field in English.'}
+
 Rules for decisions:
 - Every decision must be specific and actionable, not generic advice.
 - Ground claims in the supplied statistics. Never invent exact facts that are not present.
@@ -139,7 +141,7 @@ Return ONLY a valid JSON object with this exact structure, no markdown, no expla
 
     const result = await model.generateContent(prompt);
     const text   = result.response.text();
-    return JSON.parse(text);
+    return { ...JSON.parse(text), _language: datasetContext.language || 'en' };
   } catch (err) {
     console.error('Gemini insights error:', err.message);
     return getMockInsights(datasetContext);
@@ -159,7 +161,20 @@ function getMockResponse(question) {
 }
 
 function getMockInsights(ctx) {
+  if (ctx.language === 'ar') return {
+    _language: 'ar',
+    executiveSummary: `تحتوي مجموعة البيانات "${ctx.name}" على ${ctx.rows?.toLocaleString() || 0} سجلًا و${ctx.columns || 0} عمود، مع درجة صحة ${ctx.healthScore || 0}%. ${ctx.healthScore > 80 ? 'البيانات نظيفة ومنظمة بشكل عام.' : 'ينبغي معالجة بعض مشكلات الجودة قبل التحليل.'}`,
+    keyFindings: [
+      { title: 'نظرة عامة على البيانات', description: `${ctx.rows?.toLocaleString() || 0} سجل عبر ${ctx.columns || 0} متغير. درجة الصحة: ${ctx.healthScore || 0}%.`, impact: 'high', metric: `صحة ${ctx.healthScore || 0}%` },
+      { title: 'جودة البيانات', description: 'راجع صفحة جودة البيانات لتحليل القيم المفقودة والقيم الشاذة بالتفصيل.', impact: 'medium', metric: 'راجع الجودة' },
+    ],
+    trends: [{ title: 'إعداد الذكاء الاصطناعي', description: 'أضف GEMINI_API_KEY إلى ملف البيئة في backend لتفعيل التحليل الذكي الكامل.', direction: 'up' }],
+    correlations: [],
+    anomalies: [{ title: 'الذكاء الاصطناعي غير مفعّل', description: 'أضف مفتاح Gemini إلى ملف البيئة في backend للحصول على رؤى حقيقية.', severity: 'info' }],
+    recommendations: ['أضف مفتاح Gemini لتفعيل الرؤى الكاملة', 'راجع تقرير جودة البيانات', 'نظّف البيانات قبل التحليل'],
+  };
   return {
+    _language: 'en',
     executiveSummary: `The dataset "${ctx.name}" contains ${ctx.rows?.toLocaleString() || 0} rows and ${ctx.columns || 0} columns with a health score of ${ctx.healthScore || 0}%. ${ctx.healthScore > 80 ? 'The data is generally clean and well-structured.' : 'Some quality issues should be addressed before analysis.'}`,
     keyFindings: [
       { title: 'Dataset Overview', description: `${ctx.rows?.toLocaleString() || 0} records across ${ctx.columns || 0} variables. Health score: ${ctx.healthScore || 0}%.`, impact: 'high', metric: `${ctx.healthScore || 0}% health` },

@@ -1,5 +1,5 @@
 const { query }  = require('../db');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 // ── Email sender ──────────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ async function inviteMember(req, res, next) {
     }
 
     const { id: orgId, name: orgName } = orgResult.rows[0];
-    const inviteToken = uuidv4();
+    const inviteToken = crypto.randomUUID();
     const expires     = new Date(Date.now() + 7 * 24 * 3600000); // 7 days
 
     // لو المستخدم موجود اتحقق مش member أصلاً

@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 import type { Dataset, Notification } from '../services/api';
 
 interface AppState {
+  language: 'en' | 'ar';
+  toggleLanguage: () => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   sidebarCollapsed: boolean;
@@ -25,6 +27,8 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
+      language: 'en',
+      toggleLanguage: () => set(s => ({ language: s.language === 'en' ? 'ar' : 'en' })),
       theme: 'dark',
       toggleTheme: () => {
         const newTheme = get().theme === 'dark' ? 'light' : 'dark';
@@ -55,6 +59,6 @@ export const useStore = create<AppState>()(
       authUser: null,
       setAuthUser: (user) => set({ authUser: user }),
     }),
-    { name: 'uda-store', partialize: (s) => ({ theme: s.theme, sidebarCollapsed: s.sidebarCollapsed, authUser: s.authUser }) }
+    { name: 'uda-store', partialize: (s) => ({ language: s.language, theme: s.theme, sidebarCollapsed: s.sidebarCollapsed, authUser: s.authUser }) }
   )
 );

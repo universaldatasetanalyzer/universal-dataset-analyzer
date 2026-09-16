@@ -3,7 +3,6 @@ const crypto     = require('crypto');
 const jwt        = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
-const { v4: uuidv4 }   = require('uuid');
 const { query, pool }  = require('../db');
 const { analyzeDataset } = require('../services/analysis');
 const { getUserPlan }  = require('../services/plan');
@@ -55,7 +54,7 @@ function validatePassword(password) {
 
 // ── Helper: create org for new user ──────────────────────────────────────────
 async function createUserOrg(userId, name, db = { query }) {
-  const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + uuidv4().slice(0, 6);
+  const slug = name.toLowerCase().replace(/\s+/g, '-') + '-' + crypto.randomUUID().slice(0, 6);
   const orgResult = await db.query(
     `INSERT INTO organizations (name, slug, owner_id, plan) VALUES ($1, $2, $3, 'free') RETURNING id`,
     [name + "'s Workspace", slug, userId]
@@ -216,7 +215,7 @@ async function forgotPassword(req, res, next) {
     const result = await query('SELECT id, name FROM users WHERE email = $1', [email.toLowerCase()]);
     if (result.rows.length > 0) {
       const user    = result.rows[0];
-      const token   = uuidv4();
+      const token   = crypto.randomUUID();
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
       const expires = new Date(Date.now() + 3600000);
       await query('UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3', [tokenHash, expires, user.id]);

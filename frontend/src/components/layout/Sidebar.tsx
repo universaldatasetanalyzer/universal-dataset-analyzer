@@ -29,9 +29,18 @@ const NAV_ITEMS = [
   ]},
 ];
 
+const ARABIC_NAV_ITEMS = [
+  { group: 'الرئيسية', items: [{ to: '/dashboard', label: 'لوحة التحكم' }, { to: '/upload', label: 'رفع البيانات' }] },
+  { group: 'التحليل', items: [{ to: '/summary', label: 'ملخص البيانات' }, { to: '/quality', label: 'جودة البيانات' }, { to: '/cleaning', label: 'تنظيف البيانات' }, { to: '/visualize', label: 'الرسوم البيانية' }, { to: '/insights', label: 'رؤى الذكاء الاصطناعي' }, { to: '/chat', label: 'محادثة مع البيانات' }] },
+  { group: 'مساحة العمل', items: [{ to: '/reports', label: 'التقارير' }, { to: '/billing', label: 'الفوترة' }, { to: '/team', label: 'الفريق' }, { to: '/settings', label: 'الإعدادات' }] },
+];
+
 export const Sidebar: React.FC = () => {
-  const { sidebarCollapsed, toggleSidebar } = useStore();
+  const { sidebarCollapsed, toggleSidebar, language } = useStore();
   const location = useLocation();
+  const navItems = language === 'ar'
+    ? NAV_ITEMS.map((group, groupIndex) => ({ ...group, group: ARABIC_NAV_ITEMS[groupIndex].group, items: group.items.map((item, itemIndex) => ({ ...item, label: ARABIC_NAV_ITEMS[groupIndex].items[itemIndex].label })) }))
+    : NAV_ITEMS;
 
   return (
     <motion.aside
@@ -59,7 +68,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {NAV_ITEMS.map(group => (
+        {navItems.map(group => (
           <div key={group.group}>
             <AnimatePresence>
               {!sidebarCollapsed && (

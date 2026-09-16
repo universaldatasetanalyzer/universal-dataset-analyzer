@@ -21,12 +21,16 @@ async function getDatasetWithAccess(datasetId, userId) {
 
 async function getInsights(req, res, next) {
   try {
+    const language = req.query.language === 'ar' ? 'ar' : 'en';
     const ds = await getDatasetWithAccess(req.params.datasetId, req.user.id);
     if (!ds) return res.status(404).json({ error: 'Dataset not found' });
 
     const existing = await query(
-      `SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'insights' ORDER BY created_at DESC LIMIT 1`,
-      [req.params.datasetId]
+      `SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'insights'
+       AND (($2 = 'en' AND (result_data->>'_language' IS NULL OR result_data->>'_language' = 'en'))
+         OR ($2 = 'ar' AND result_data->>'_language' = 'ar'))
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.params.datasetId, language]
     );
     if (existing.rows.length > 0) return res.json(existing.rows[0].result_data);
 
@@ -45,6 +49,7 @@ async function getInsights(req, res, next) {
       columnSummary: summaryResult.rows[0]?.result_data?.columns || [],
       sampleStats: summaryResult.rows[0]?.result_data?.stats || null,
       qualityIssues: qualityResult.rows[0]?.result_data?.issues  || [],
+      language,
     };
 
     const insights = await generateAIInsights(context);
