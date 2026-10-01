@@ -1,24 +1,12 @@
 const { query }  = require('../db');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-
-// ── Email sender ──────────────────────────────────────────────────────────────
-function createTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST   || 'smtp.gmail.com',
-    port:   parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-}
+const { sendEmail } = require('../services/email');
 
 async function sendInviteEmail(toEmail, inviterName, orgName, role, token) {
   const appUrl    = process.env.APP_URL || 'http://localhost:5173';
   const acceptUrl = `${appUrl}/accept-invite?token=${token}`;
 
-  const transporter = createTransporter();
-  await transporter.sendMail({
-    from:    `"Universal Analyzer" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to:      toEmail,
     subject: `${inviterName} invited you to join ${orgName}`,
     html: `

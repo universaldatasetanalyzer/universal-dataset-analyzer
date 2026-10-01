@@ -1,12 +1,12 @@
 const bcrypt     = require('bcryptjs');
 const crypto     = require('crypto');
 const jwt        = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const { query, pool }  = require('../db');
 const { analyzeDataset } = require('../services/analysis');
 const { getUserPlan }  = require('../services/plan');
 const { seedDemoDataset } = require('../services/demoData');
+const { sendEmail } = require('../services/email');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -14,21 +14,10 @@ function generateToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 }
 
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-}
-
 async function sendResetEmail(email, token, name) {
   const appUrl   = process.env.APP_URL || 'http://localhost:5173';
   const resetUrl = `${appUrl}/reset-password?token=${token}`;
-  const transporter = createTransporter();
-  await transporter.sendMail({
-    from: `"Universal Analyzer" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to: email,
     subject: 'Reset your password',
     html: `
@@ -40,6 +29,39 @@ async function sendResetEmail(email, token, name) {
         <p style="color:#94a3b8;font-size:13px">If you didn't request this, ignore this email.</p>
       </div>`,
   });
+}
+
+function createVerificationCode() {
+  return crypto.randomInt(100000, 1000000).toString();
+}
+
+function hashVerificationCode(code) {
+  return crypto.createHash('sha256').update(code).digest('hex');
+}
+
+async function sendVerificationEmail(email, name, code) {
+  await sendEmail({
+    to: email,
+    subject: 'Verify your Universal Analyzer email',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+        <h2 style="color:#6366f1">Verify your email</h2>
+        <p>Hi ${name || 'there'},</p>
+        <p>Use this 6-digit verification code to verify your email address:</p>
+        <p style="font-size:32px;letter-spacing:8px;font-weight:700">${code}</p>
+        <p style="color:#94a3b8;font-size:13px">This code expires in 10 minutes.</p>
+      </div>`,
+  });
+}
+
+async function issueVerificationCode(user) {
+  const code = createVerificationCode();
+  const expires = new Date(Date.now() + 10 * 60 * 1000);
+  await query(
+    'UPDATE users SET verification_code_hash = $1, verification_code_expires = $2 WHERE id = $3',
+    [hashVerificationCode(code), expires, user.id]
+  );
+  await sendVerificationEmail(user.email, user.name, code);
 }
 
 // ── Password validation ───────────────────────────────────────────────────────
@@ -96,6 +118,12 @@ async function register(req, res, next) {
         });
       }
 
+      try {
+        await issueVerificationCode(user);
+      } catch (emailErr) {
+        console.error('Failed to send verification email:', emailErr.message);
+      }
+
       const token = generateToken(user.id);
       const plan  = await getUserPlan(user.id);
       res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, plan } });
@@ -105,6 +133,47 @@ async function register(req, res, next) {
     } finally {
       client.release();
     }
+  } catch (err) { next(err); }
+}
+
+async function verifyEmail(req, res, next) {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ error: 'Email and verification code are required' });
+
+    const result = await query(
+      `SELECT id FROM users
+       WHERE email = $1 AND email_verified = false
+         AND verification_code_hash = $2 AND verification_code_expires > NOW()`,
+      [email.toLowerCase(), hashVerificationCode(code)]
+    );
+    if (result.rows.length === 0) return res.status(400).json({ error: 'Invalid or expired verification code' });
+
+    await query(
+      'UPDATE users SET email_verified = true, verification_code_hash = NULL, verification_code_expires = NULL WHERE id = $1',
+      [result.rows[0].id]
+    );
+    res.json({ message: 'Email verified successfully' });
+  } catch (err) { next(err); }
+}
+
+async function resendVerification(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const result = await query(
+      'SELECT id, name, email FROM users WHERE email = $1 AND email_verified = false',
+      [email.toLowerCase()]
+    );
+    if (result.rows.length > 0) {
+      try {
+        await issueVerificationCode(result.rows[0]);
+      } catch (emailErr) {
+        console.error('Failed to resend verification email:', emailErr.message);
+      }
+    }
+    res.json({ message: 'If that email is registered, a verification code has been sent.' });
   } catch (err) { next(err); }
 }
 
@@ -244,4 +313,4 @@ async function resetPassword(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { register, login, me, forgotPassword, resetPassword, googleAuth, googleCallback };
+module.exports = { register, login, me, forgotPassword, resetPassword, verifyEmail, resendVerification, googleAuth, googleCallback };

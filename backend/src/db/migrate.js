@@ -11,6 +11,8 @@ const migrations = [
     role VARCHAR(50) DEFAULT 'owner',
     avatar_url TEXT,
     email_verified BOOLEAN DEFAULT false,
+    verification_code_hash VARCHAR(255),
+    verification_code_expires TIMESTAMPTZ,
     reset_token VARCHAR(255),
     reset_token_expires TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -137,6 +139,8 @@ const migrations = [
   // Admin access and Google OAuth
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT false`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255)`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_hash VARCHAR(255)`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires TIMESTAMPTZ`,
   `ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`,
 
   // Paddle billing fields (added for payments integration)

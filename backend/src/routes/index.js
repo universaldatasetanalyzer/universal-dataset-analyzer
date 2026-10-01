@@ -52,6 +52,8 @@ const auth = require('../controllers/auth');
 router.post('/auth/register',       auth.register);
 router.post('/auth/login',          auth.login);
 router.get('/auth/me',              authenticate, auth.me);
+router.post('/auth/verify-email',   auth.verifyEmail);
+router.post('/auth/resend-verification', auth.resendVerification);
 router.post('/auth/forgot-password', rateLimits.passwordReset, auth.forgotPassword);
 router.get('/auth/google',          auth.googleAuth);
 router.get('/auth/google/callback', auth.googleCallback);
