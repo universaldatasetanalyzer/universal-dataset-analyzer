@@ -4,6 +4,7 @@ import { AppLayout } from '../layouts/AppLayout';
 import { LandingPage } from '../pages/LandingPage';
 import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage, GoogleCallbackPage } from '../pages/AuthPages';
 import { AcceptInvitePage } from '../pages/AcceptInvitePage';
+import { PrivacyPage, TermsPage, SupportPage } from '../pages/LegalPages';
 import { DashboardPage } from '../pages/DashboardPage';
 import { UploadPage } from '../pages/UploadPage';
 import { SummaryPage } from '../pages/SummaryPage';
@@ -62,6 +63,9 @@ const router = createBrowserRouter([
   { path: '/reset-password',  element: <ResetPasswordPage /> },
   { path: '/accept-invite',         element: <AcceptInvitePage /> },
   { path: '/auth/google/callback', element: <GoogleCallbackPage /> },
+  { path: '/privacy',           element: <PrivacyPage /> },
+  { path: '/terms',             element: <TermsPage /> },
+  { path: '/support',           element: <SupportPage /> },
   {
     element: <RequireAuth><AppLayout /></RequireAuth>,
     children: [

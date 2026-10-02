@@ -99,8 +99,6 @@ export const AdminPage: React.FC = () => {
   const [toast, setToast]           = useState('');
   const [updating, setUpdating]     = useState<string | null>(null);
 
-  useEffect(() => { if (authed) load(); }, [authed]);
-
   async function handleLogin(user: string, pass: string) {
     console.log('[Admin Page] Attempting login with user:', user);
     setAdminAuth(user, pass);
@@ -129,6 +127,10 @@ export const AdminPage: React.FC = () => {
       showToast(err instanceof Error ? err.message : 'Failed to load');
     } finally { setLoading(false); }
   }
+
+  useEffect(() => {
+    if (authed) queueMicrotask(() => { void load(); });
+  }, [authed]);
 
   function showToast(msg: string) {
     setToast(msg);

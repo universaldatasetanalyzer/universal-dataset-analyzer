@@ -14,7 +14,7 @@
 ```bash
 createdb uda_db
 cd backend
-cp .env .env.local   # edit DB credentials
+npm install
 npm run migrate
 ```
 
@@ -22,9 +22,6 @@ npm run migrate
 ```bash
 cd backend
 npm install
-npm install nodemailer
-npm install @google/generative-ai
-npm install google-auth-library
 npm run dev
 # Runs on http://localhost:3001
 ```
@@ -61,15 +58,22 @@ DB_PASSWORD=replace_with_database_password
 JWT_SECRET=replace_with_long_random_secret
 PYTHON_SERVICE_URL=http://localhost:8000
 GEMINI_API_KEY=replace_with_gemini_api_key
-OPENAI_MODEL=gpt-4o-mini
+GEMINI_MODEL=gemini-3.6-flash
 FRONTEND_URL=http://localhost:5173
+PYTHON_SERVICE_URL=http://localhost:8000
+PYTHON_SERVICE_TOKEN=replace_with_internal_service_token
 
-# Email (for password reset)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password    # Gmail: use App Password not your real password
+# Email (Resend)
+RESEND_API_KEY=replace_with_resend_api_key
+EMAIL_FROM=onboarding@resend.dev
+
+# Beta resource limits
+STORAGE_PROVIDER=local
+MAX_FILE_SIZE=52428800
+MAX_DATASET_ROWS=1000000
+MAX_DATASET_COLUMNS=200
+MAX_STORAGE_BYTES=5368709120
+MAX_CONCURRENT_ANALYSES=2
 APP_URL=http://localhost:5173
 ```
 
@@ -93,7 +97,7 @@ VITE_API_URL=http://localhost:3001/api
 
 ### Phase C — Authentication ✅
 - Register, Login, Logout, Forgot/Reset Password
-- Password reset via email (nodemailer + SMTP)
+- Password reset and verification email via Resend
 - JWT authentication (7-day tokens)
 - Protected routes (frontend auth guard)
 - Role-based access: Owner, Admin, Analyst, Viewer

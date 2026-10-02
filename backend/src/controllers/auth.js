@@ -183,10 +183,11 @@ async function login(req, res, next) {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
-    const result = await query('SELECT id, name, email, role, password_hash FROM users WHERE email = $1', [email.toLowerCase()]);
+    const result = await query('SELECT id, name, email, role, password_hash, email_verified FROM users WHERE email = $1', [email.toLowerCase()]);
     if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid email or password' });
 
     const user  = result.rows[0];
+    if (user.email_verified === false) return res.status(403).json({ error: 'Please verify your email before signing in.' });
     if (!user.password_hash) return res.status(401).json({ error: 'This account uses Google Sign-In. Please sign in with Google.' });
 
     const valid = await bcrypt.compare(password, user.password_hash);

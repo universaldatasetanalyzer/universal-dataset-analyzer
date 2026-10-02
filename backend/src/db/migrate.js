@@ -51,6 +51,7 @@ const migrations = [
     name VARCHAR(255) NOT NULL,
     original_name VARCHAR(255) NOT NULL,
     file_path TEXT NOT NULL,
+    storage_key TEXT,
     file_size BIGINT NOT NULL,
     format VARCHAR(20) NOT NULL,
     rows_count INTEGER,
@@ -97,6 +98,7 @@ const migrations = [
     name VARCHAR(255) NOT NULL,
     report_type VARCHAR(50) NOT NULL,
     file_path TEXT,
+    storage_key TEXT,
     file_size INTEGER,
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -141,6 +143,9 @@ const migrations = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255)`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_hash VARCHAR(255)`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code_expires TIMESTAMPTZ`,
+  `ALTER TABLE datasets ADD COLUMN IF NOT EXISTS storage_key TEXT`,
+  `ALTER TABLE reports ADD COLUMN IF NOT EXISTS storage_key TEXT`,
+  `ALTER TABLE org_members ADD COLUMN IF NOT EXISTS invite_expires TIMESTAMPTZ`,
   `ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`,
 
   // Paddle billing fields (added for payments integration)

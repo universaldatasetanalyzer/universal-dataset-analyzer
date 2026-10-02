@@ -1,22 +1,23 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { root, createObjectKey } = require('../services/storage');
 
-const uploadDir = process.env.UPLOAD_DIR || './uploads';
+const uploadDir = root;
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const userDir = path.join(uploadDir, req.user?.id || 'anonymous');
+    const userDir = path.join(uploadDir, 'datasets', req.user?.id || 'anonymous');
     if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
     cb(null, userDir);
   },
   filename: (req, file, cb) => {
-    const unique = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const ext = path.extname(file.originalname);
-    cb(null, `${unique}${ext}`);
+    const objectKey = createObjectKey(req.user?.id || 'anonymous', file.originalname);
+    req.storageObjectKey = objectKey;
+    cb(null, path.basename(objectKey));
   },
 });
 

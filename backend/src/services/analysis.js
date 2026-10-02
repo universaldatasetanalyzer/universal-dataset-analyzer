@@ -3,6 +3,8 @@ const fs = require('fs');
 const FormData = require('form-data');
 const { query } = require('../db');
 const { createNotification } = require('./notifications');
+const { provider, putFile, createObjectKey, deleteObject, deleteTemporaryFile } = require('./storage');
+const { acquireAnalysisSlot, validateShape } = require('./resourceLimits');
 
 const PYTHON_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
@@ -16,7 +18,10 @@ async function callPython(endpoint, filePath, fields) {
 
   const response = await fetch(`${PYTHON_URL}${endpoint}`, {
     method: 'POST',
-    headers: form.getHeaders(),
+    headers: {
+      ...form.getHeaders(),
+      ...(process.env.PYTHON_SERVICE_TOKEN ? { 'x-internal-service-token': process.env.PYTHON_SERVICE_TOKEN } : {}),
+    },
     body: form,
     timeout: 120000,
   });
@@ -29,14 +34,17 @@ async function callPython(endpoint, filePath, fields) {
   return response.json();
 }
 
-async function analyzeDataset(datasetId, filePath, format) {
+async function analyzeDataset(datasetId, filePath, format, storageKey) {
+  let releaseSlot = () => {};
   try {
+    releaseSlot = acquireAnalysisSlot();
     console.log(`Starting analysis for dataset ${datasetId}`);
 
     await query('UPDATE datasets SET status = $1 WHERE id = $2', ['processing', datasetId]);
 
     // Call Python microservice for full analysis
     const result = await callPython('/analyze', filePath, { format, datasetId });
+    validateShape(result.summary?.rowCount, result.summary?.columnCount);
 
     // Store summary
     await query(
@@ -94,21 +102,42 @@ async function analyzeDataset(datasetId, filePath, format) {
       eventKey: `dataset:analysis-failed:${datasetId}`,
     });
     throw err;
+  } finally {
+    releaseSlot();
+    if (provider === 's3' && storageKey) await deleteTemporaryFile(filePath);
   }
 }
 
 async function cleanDataset(datasetId, filePath, operations) {
-  const result = await callPython('/clean', filePath, {
-    operations,
-    datasetId,
-    format: require('path').extname(filePath).slice(1),
-  });
-  return result;
+  let releaseSlot = () => {};
+  try {
+    releaseSlot = acquireAnalysisSlot();
+    const result = await callPython('/clean', filePath, {
+      operations,
+      datasetId,
+      format: require('path').extname(filePath).slice(1),
+    });
+    if (result.cleanedFilePath) {
+      const temporaryPath = result.cleanedFilePath;
+      const storageKey = createObjectKey(datasetId, temporaryPath, 'cleaned');
+      const stored = await putFile(temporaryPath, storageKey);
+      result.cleanedStorageKey = storageKey;
+      result.cleanedFilePath = stored.path;
+      await deleteTemporaryFile(temporaryPath);
+    }
+    return result;
+  } finally {
+    releaseSlot();
+  }
 }
 
 async function generateInsights(datasetId, filePath, summaryData) {
-  const result = await callPython('/insights', filePath, { summaryData, datasetId });
-  return result;
+  const releaseSlot = acquireAnalysisSlot();
+  try {
+    return await callPython('/insights', filePath, { summaryData, datasetId });
+  } finally {
+    releaseSlot();
+  }
 }
 
 module.exports = { analyzeDataset, cleanDataset, generateInsights };

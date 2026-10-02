@@ -5,6 +5,7 @@ const upload  = require('../middleware/upload');
 const rateLimits = require('../middleware/rateLimits');
 const { requirePaidPlan } = require('../middleware/billing');
 const { query } = require('../db');
+const { assertStorageAvailable, limits } = require('../services/resourceLimits');
 
 // ── Role check helper ─────────────────────────────────────────────────────────
 async function getUserRole(userId) {
@@ -47,6 +48,17 @@ function requirePermission(permKey) {
   };
 }
 
+async function checkUploadResources(req, res, next) {
+  try {
+    const contentLength = Number(req.headers['content-length'] || 0);
+    if (contentLength > limits.maxFileSize) {
+      return res.status(413).json({ error: `Files must be smaller than ${Math.round(limits.maxFileSize / 1024 / 1024)} MB.` });
+    }
+    await assertStorageAvailable(req.user.id, Math.max(0, contentLength));
+    next();
+  } catch (err) { next(err); }
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const auth = require('../controllers/auth');
 router.post('/auth/register',       auth.register);
@@ -62,7 +74,7 @@ router.post('/auth/reset-password', rateLimits.passwordReset, auth.resetPassword
 // ── Datasets ──────────────────────────────────────────────────────────────────
 const datasets = require('../controllers/datasets');
 router.get('/datasets',                       authenticate, datasets.getDatasets);
-router.post('/datasets/upload',               authenticate, requirePaidPlan, rateLimits.uploads, requirePermission('upload'), upload.single('file'), datasets.uploadDataset);
+router.post('/datasets/upload',               authenticate, requirePaidPlan, rateLimits.uploads, requirePermission('upload'), checkUploadResources, upload.single('file'), datasets.uploadDataset);
 router.get('/datasets/:id',                   authenticate, datasets.getDataset);
 router.delete('/datasets/:id',                authenticate, requirePermission('delete'), datasets.deleteDataset);
 router.get('/datasets/:id/summary',           authenticate, datasets.getSummary);

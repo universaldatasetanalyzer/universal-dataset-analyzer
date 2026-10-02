@@ -45,15 +45,39 @@ services:
         sync: false
       - key: GOOGLE_CALLBACK_URL
         sync: false
-      - key: SMTP_HOST
+      - key: RESEND_API_KEY
         sync: false
-      - key: SMTP_PORT
+      - key: EMAIL_FROM
         sync: false
-      - key: SMTP_SECURE
+      - key: PYTHON_SERVICE_URL
         sync: false
-      - key: SMTP_USER
+      - key: PYTHON_SERVICE_TOKEN
         sync: false
-      - key: SMTP_PASS
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+      - key: STORAGE_PROVIDER
+        value: s3
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: MAX_FILE_SIZE
+        value: 52428800
+      - key: MAX_DATASET_ROWS
+        value: 1000000
+      - key: MAX_DATASET_COLUMNS
+        value: 200
+      - key: MAX_STORAGE_BYTES
+        value: 5368709120
+      - key: MAX_CONCURRENT_ANALYSES
+        value: 2
+      - key: SENTRY_DSN
         sync: false
       - key: PADDLE_ENVIRONMENT
         value: sandbox
@@ -67,3 +91,22 @@ services:
         sync: false
       - key: PADDLE_PRICE_YEARLY
         sync: false
+
+  - type: web
+    name: uda-python-service
+    runtime: python
+    rootDir: backend/python-service
+    plan: free
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_SERVICE_TOKEN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: MAX_DATASET_ROWS
+        value: 1000000
+      - key: MAX_DATASET_COLUMNS
+        value: 200

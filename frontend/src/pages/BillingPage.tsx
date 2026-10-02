@@ -12,7 +12,7 @@ export interface Tier {
 }
 
 const TIERS: Tier[] = [
-  { name: 'Pro', description: 'Full access to every Universal Dataset Analyzer feature.', features: ['Unlimited dataset uploads', 'Quality checks and cleaning', 'Visualizations and charts', 'AI insights and chat', 'Full report generation'], priceId: PADDLE_PRICES },
+  { name: 'Pro', description: 'Access to the full Universal Dataset Analyzer workflow within current beta limits.', features: ['Dataset uploads within beta limits', 'Quality checks and cleaning', 'Visualizations and charts', 'AI insights and chat', 'HTML report generation'], priceId: PADDLE_PRICES },
 ];
 
 type BillingInterval = 'month' | 'year';

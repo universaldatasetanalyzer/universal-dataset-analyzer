@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
@@ -9,16 +9,27 @@ import uuid
 import json
 import tempfile
 import shutil
+import hmac
 from pathlib import Path
+
+MAX_ROWS = int(os.getenv("MAX_DATASET_ROWS", "1000000"))
+MAX_COLUMNS = int(os.getenv("MAX_DATASET_COLUMNS", "200"))
 
 app = FastAPI(title="UDA Analysis Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in os.getenv("FRONTEND_URL", "http://localhost:5173").split(",") if origin.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def verify_internal_service_token(token: Optional[str]) -> None:
+    expected = os.getenv("PYTHON_SERVICE_TOKEN")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Internal service authentication is not configured")
+    if not token or not hmac.compare_digest(token, expected):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 # ─── Request Models ────────────────────────────────────────────────────────────
 
@@ -89,6 +100,14 @@ def load_dataframe(file_path: str, fmt: str) -> pd.DataFrame:
         return pd.read_json(file_path)
     else:
         raise ValueError(f"Unsupported format: {fmt}")
+
+
+def validate_dataframe_shape(df: pd.DataFrame) -> None:
+    rows, cols = df.shape
+    if rows > MAX_ROWS:
+        raise ValueError(f"Dataset exceeds the {MAX_ROWS:,} row limit")
+    if cols > MAX_COLUMNS:
+        raise ValueError(f"Dataset exceeds the {MAX_COLUMNS:,} column limit")
 
 
 def detect_column_type(series: pd.Series) -> str:
@@ -432,10 +451,13 @@ async def analyze(
     file: UploadFile = File(...),
     format: str = Form(...),
     datasetId: str = Form(...),
+    internal_token: Optional[str] = Header(default=None, alias="x-internal-service-token"),
 ):
+    verify_internal_service_token(internal_token)
     temp_path = await save_upload(file)
     try:
         df = load_dataframe(temp_path, format)
+        validate_dataframe_shape(df)
         rows, cols = df.shape
 
         # ── Column analysis ───────────────────────────────────────────────────
@@ -548,6 +570,9 @@ async def analyze(
 
         return {"summary": summary, "quality": quality, "visualization": viz}
 
+    except ValueError as e:
+        status = 413 if "exceeds the" in str(e) else 400
+        raise HTTPException(status_code=status, detail=str(e))
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -562,11 +587,14 @@ async def clean(
     operations: str = Form(...),
     datasetId: str = Form(...),
     format: str = Form(...),
+    internal_token: Optional[str] = Header(default=None, alias="x-internal-service-token"),
 ):
+    verify_internal_service_token(internal_token)
     temp_path = await save_upload(file)
     try:
         ops = json.loads(operations)
         df  = load_dataframe(temp_path, format)
+        validate_dataframe_shape(df)
 
         original_rows = len(df)
         original_cols = len(df.columns)
@@ -734,6 +762,9 @@ async def clean(
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid operations JSON: {e.msg}")
+    except ValueError as e:
+        status = 413 if "exceeds the" in str(e) else 400
+        raise HTTPException(status_code=status, detail=str(e))
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -747,11 +778,14 @@ async def insights(
     file: UploadFile = File(...),
     summaryData: str = Form(...),
     datasetId: str = Form(...),
+    internal_token: Optional[str] = Header(default=None, alias="x-internal-service-token"),
 ):
+    verify_internal_service_token(internal_token)
     temp_path = await save_upload(file)
     try:
         summary = json.loads(summaryData)
         df = load_dataframe(temp_path, Path(file.filename or '').suffix.lstrip('.'))
+        validate_dataframe_shape(df)
         return {
             "summaryData": summary,
             "rowCount": len(df),
@@ -760,6 +794,9 @@ async def insights(
         }
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid summaryData JSON: {e.msg}")
+    except ValueError as e:
+        status = 413 if "exceeds the" in str(e) else 400
+        raise HTTPException(status_code=status, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:

@@ -9,11 +9,17 @@ const routes = require('./routes');
 const { errorHandler, notFound } = require('./middleware/errors');
 const { paddleWebhook } = require('./controllers/billing');
 const { databaseInfo } = require('./db');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.set('trust proxy', 1);
+app.use((req, res, next) => {
+  req.id = req.headers['x-request-id'] || crypto.randomUUID();
+  res.setHeader('x-request-id', req.id);
+  next();
+});
 
 function parseAllowedOrigins() {
   const configured = [

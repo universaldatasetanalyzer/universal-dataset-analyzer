@@ -1,5 +1,8 @@
 const { query } = require('../db');
 const { createNotification } = require('../services/notifications');
+const { putBuffer, readBuffer, deleteObject, createObjectKey, exists } = require('../services/storage');
+
+const REPORT_TYPES = new Set(['full', 'quality', 'summary', 'executive']);
 
 async function getReports(req, res, next) {
   try {
@@ -24,6 +27,7 @@ async function generateReport(req, res, next) {
   try {
     const { datasetId, reportType, name } = req.body;
     if (!datasetId || !reportType) return res.status(400).json({ error: 'datasetId and reportType are required' });
+    if (!REPORT_TYPES.has(reportType)) return res.status(400).json({ error: 'Unsupported report type' });
 
     const dsResult = await query(
       `SELECT * FROM datasets WHERE id = $1
@@ -38,6 +42,14 @@ async function generateReport(req, res, next) {
       [datasetId, req.user.id]
     );
     if (dsResult.rows.length === 0) return res.status(404).json({ error: 'Dataset not found' });
+
+    const activeReport = await query(
+      `SELECT id, name, report_type, status, created_at FROM reports
+       WHERE user_id = $1 AND dataset_id = $2 AND report_type = $3 AND status = 'generating'
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id, datasetId, reportType]
+    );
+    if (activeReport.rows.length > 0) return res.status(202).json({ report: activeReport.rows[0] });
 
     const reportName = name || `${dsResult.rows[0].name} - ${reportType} Report`;
     const result = await query(
@@ -56,9 +68,32 @@ async function generateReport(req, res, next) {
 
 async function generateReportAsync(reportId, datasetId, reportType, userId) {
   try {
-    await new Promise(r => setTimeout(r, 2000));
-    const mockSize = Math.floor(Math.random() * 2000000 + 500000);
-    await query(`UPDATE reports SET status = 'ready', file_size = $1 WHERE id = $2`, [mockSize, reportId]);
+    const reportResult = await query(
+      `SELECT r.*, d.name as dataset_name FROM reports r JOIN datasets d ON d.id = r.dataset_id WHERE r.id = $1`,
+      [reportId]
+    );
+    if (reportResult.rows.length === 0) throw new Error('Report record not found');
+    const report = reportResult.rows[0];
+    const [summaryRes, qualityRes, vizRes, insightsRes] = await Promise.all([
+      query(`SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'summary' ORDER BY created_at DESC LIMIT 1`, [datasetId]),
+      query(`SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'quality' ORDER BY created_at DESC LIMIT 1`, [datasetId]),
+      query(`SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'visualization' ORDER BY created_at DESC LIMIT 1`, [datasetId]),
+      query(`SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'insights' ORDER BY created_at DESC LIMIT 1`, [datasetId]),
+    ]);
+    const html = buildHtmlReport(
+      report,
+      summaryRes.rows[0]?.result_data || {},
+      qualityRes.rows[0]?.result_data || {},
+      vizRes.rows[0]?.result_data || {},
+      insightsRes.rows[0]?.result_data || {}
+    );
+    const storageKey = createObjectKey(userId, `${report.name}.html`, 'reports');
+    const stored = await putBuffer(Buffer.from(html, 'utf8'), storageKey);
+    if (!(await exists(storageKey))) throw new Error('Report artifact was not persisted');
+    await query(
+      `UPDATE reports SET status = 'ready', file_path = $1, storage_key = $2, file_size = $3 WHERE id = $4`,
+      [stored.path, storageKey, Buffer.byteLength(html), reportId]
+    );
     await createNotification({
       userId,
       title: 'Report ready',
@@ -90,25 +125,14 @@ async function downloadReport(req, res, next) {
 
     const report = result.rows[0];
     if (report.status !== 'ready') return res.status(400).json({ error: 'Report is not ready yet', status: report.status });
+    if (!report.storage_key || !(await exists(report.storage_key))) {
+      return res.status(409).json({ error: 'Report artifact is unavailable. Please generate the report again.' });
+    }
 
-    // جيب كل الـ analysis data
-    const [summaryRes, qualityRes, vizRes, insightsRes] = await Promise.all([
-      query(`SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'summary'     ORDER BY created_at DESC LIMIT 1`, [report.dataset_id]),
-      query(`SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'quality'     ORDER BY created_at DESC LIMIT 1`, [report.dataset_id]),
-      query(`SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'visualization' ORDER BY created_at DESC LIMIT 1`, [report.dataset_id]),
-      query(`SELECT result_data FROM analysis_results WHERE dataset_id = $1 AND result_type = 'insights'    ORDER BY created_at DESC LIMIT 1`, [report.dataset_id]),
-    ]);
-
-    const summary  = summaryRes.rows[0]?.result_data  || {};
-    const quality  = qualityRes.rows[0]?.result_data  || {};
-    const viz      = vizRes.rows[0]?.result_data      || {};
-    const insights = insightsRes.rows[0]?.result_data || {};
-
-    const html = buildHtmlReport(report, summary, quality, viz, insights);
     const fileName = `${report.name.replace(/[^a-z0-9]/gi, '_')}.html`;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.send(html);
+    res.send(await readBuffer(report.storage_key));
   } catch (err) { next(err); }
 }
 
@@ -501,10 +525,11 @@ tr:hover td{background:#fafafa}
 async function deleteReport(req, res, next) {
   try {
     const result = await query(
-      'DELETE FROM reports WHERE id = $1 AND user_id = $2 RETURNING id',
+      'DELETE FROM reports WHERE id = $1 AND user_id = $2 RETURNING id, storage_key',
       [req.params.id, req.user.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Report not found' });
+    await deleteObject(result.rows[0].storage_key);
     res.json({ message: 'Report deleted' });
   } catch (err) { next(err); }
 }

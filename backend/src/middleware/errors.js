@@ -1,5 +1,7 @@
+const { captureException } = require('../services/monitoring');
+
 function errorHandler(err, req, res, next) {
-  console.error('Error:', err.message, err.stack);
+  captureException(err, { method: req.method, path: req.path, requestId: req.id });
 
   if (err.code === '23505') { // Unique violation
     return res.status(409).json({ error: 'Resource already exists' });
@@ -17,8 +19,12 @@ function errorHandler(err, req, res, next) {
     return res.status(400).json({ error: err.message });
   }
 
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'File too large. Please upload a smaller dataset.' });
+  }
+
   res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
+    error: err.status && err.message ? err.message : 'Internal server error',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 }

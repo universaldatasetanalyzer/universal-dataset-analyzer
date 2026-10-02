@@ -13,14 +13,9 @@ export const AcceptInvitePage: React.FC = () => {
   const navigate       = useNavigate();
   const { authUser } = useStore();
 
-  const [status, setStatus]     = useState<'loading' | 'needsLogin' | 'success' | 'error'>('loading');
-  const [message, setMessage]   = useState('');
+  const [status, setStatus]     = useState<'loading' | 'needsLogin' | 'success' | 'error'>(token ? 'loading' : 'error');
+  const [message, setMessage]   = useState(token ? '' : 'Invalid invite link.');
   const [inviteInfo, setInviteInfo] = useState<{ email: string; role: string } | null>(null);
-
-  useEffect(() => {
-    if (!token) { setStatus('error'); setMessage('Invalid invite link.'); return; }
-    checkInvite();
-  }, [token]);
 
   async function checkInvite() {
     try {
@@ -67,6 +62,10 @@ export const AcceptInvitePage: React.FC = () => {
       setMessage('Something went wrong.');
     }
   }
+
+  useEffect(() => {
+    if (token) queueMicrotask(() => { void checkInvite(); });
+  }, [token]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950 px-4">

@@ -3,6 +3,7 @@ const fs = require('fs');
 const { query } = require('../db');
 const { analyzeDataset } = require('../services/analysis');
 const { createNotification } = require('../services/notifications');
+const { deleteObject, putFile, readBuffer } = require('../services/storage');
 
 async function getDatasetWithAccess(datasetId, userId) {
   const result = await query(
@@ -22,27 +23,25 @@ async function getDatasetWithAccess(datasetId, userId) {
 }
 
 async function uploadDataset(req, res, next) {
+  let uploadedStorageKey;
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const {
-  originalname,
-  filename,
-  size,
-  path: uploadedPath,
-} = req.file;
-
-const filePath = path.resolve(uploadedPath);
+    const { originalname, filename, size, path: uploadedPath } = req.file;
+    const filePath = path.resolve(uploadedPath);
+    const storageKey = req.storageObjectKey || `datasets/${req.user.id}/${filename}`;
     const ext = path.extname(originalname).toLowerCase().slice(1);
+    await putFile(filePath, storageKey);
+    uploadedStorageKey = storageKey;
 
     // Insert dataset record
     const result = await query(
-      `INSERT INTO datasets (user_id, name, original_name, file_path, file_size, format, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'processing')
+      `INSERT INTO datasets (user_id, name, original_name, file_path, storage_key, file_size, format, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'processing')
        RETURNING id, name, status, created_at`,
-      [req.user.id, originalname, filename, filePath, size, ext]
+      [req.user.id, originalname, filename, filePath, storageKey, size, ext]
     );
 
     const dataset = result.rows[0];
@@ -67,6 +66,10 @@ const filePath = path.resolve(uploadedPath);
 
     res.status(201).json({ dataset: { ...dataset, size, format: ext } });
   } catch (err) {
+    if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    if (uploadedStorageKey) {
+      try { await deleteObject(uploadedStorageKey); } catch { /* best-effort orphan cleanup */ }
+    }
     next(err);
   }
 }
@@ -222,7 +225,7 @@ async function getVisualization(req, res, next) {
 async function deleteDataset(req, res, next) {
   try {
     const datasetResult = await query(
-      'SELECT id, file_path, name FROM datasets WHERE id = $1 AND user_id = $2',
+      'SELECT id, file_path, storage_key, name FROM datasets WHERE id = $1 AND user_id = $2',
       [req.params.id, req.user.id]
     );
 
@@ -232,7 +235,7 @@ async function deleteDataset(req, res, next) {
 
     const dataset = datasetResult.rows[0];
     const cleanedResult = await query(
-      `SELECT result_data->>'filePath' AS file_path
+      `SELECT result_data->>'filePath' AS file_path, result_data->>'storageKey' AS storage_key
        FROM analysis_results WHERE dataset_id = $1 AND result_type = 'cleaned'`,
       [req.params.id]
     );
@@ -241,10 +244,10 @@ async function deleteDataset(req, res, next) {
 
     const filePaths = [dataset.file_path, ...cleanedResult.rows.map(row => row.file_path)];
     for (const filePath of filePaths) {
-      if (filePath && fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
+    await deleteObject(dataset.storage_key);
+    for (const row of cleanedResult.rows) await deleteObject(row.storage_key);
 
     res.json({ message: `${dataset.name} deleted` });
   } catch (err) {
@@ -266,12 +269,18 @@ async function downloadClean(req, res, next) {
       return res.status(404).json({ error: 'No cleaned version available. Apply cleaning operations first.' });
     }
 
-    const cleanedPath = cleanResult.rows[0].result_data.filePath;
-    if (!cleanedPath || !fs.existsSync(cleanedPath)) {
+    const cleaned = cleanResult.rows[0].result_data;
+    if (cleaned.storageKey) {
+      const buffer = await readBuffer(cleaned.storageKey);
+      res.setHeader('Content-Disposition', `attachment; filename="cleaned_${ds.name}"`);
+      return res.send(buffer);
+    }
+
+    if (!cleaned.filePath || !fs.existsSync(cleaned.filePath)) {
       return res.status(404).json({ error: 'Cleaned file not found' });
     }
 
-    res.download(cleanedPath, `cleaned_${ds.name}`);
+    res.download(cleaned.filePath, `cleaned_${ds.name}`);
   } catch (err) {
     next(err);
   }

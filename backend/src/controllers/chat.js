@@ -1,5 +1,6 @@
 const { query } = require('../db');
 const { chatWithDataset } = require('../services/ai');
+const { materialize, deleteTemporaryFile } = require('../services/storage');
 
 async function getSessions(req, res, next) {
   try {
@@ -100,6 +101,9 @@ async function sendMessage(req, res, next) {
     if (!message?.trim()) {
       return res.status(400).json({ error: 'Message is required' });
     }
+    if (message.length > 4000) {
+      return res.status(413).json({ error: 'Messages must be 4,000 characters or fewer.' });
+    }
 
     const sessionResult = await query(
       'SELECT * FROM chat_sessions WHERE id = $1 AND user_id = $2',
@@ -130,27 +134,40 @@ async function sendMessage(req, res, next) {
     let datasetContext = {};
     if (session.dataset_id) {
       const dsResult = await query(
-        `SELECT d.name, d.file_path, d.rows_count, d.columns_count, d.format, d.health_score,
+        `SELECT d.name, d.file_path, d.storage_key, d.rows_count, d.columns_count, d.format, d.health_score,
                 ar.result_data
          FROM datasets d
          LEFT JOIN analysis_results ar ON ar.dataset_id = d.id AND ar.result_type = 'summary'
-         WHERE d.id = $1`,
-        [session.dataset_id]
+         WHERE d.id = $1 AND (
+           d.user_id = $2 OR EXISTS (
+             SELECT 1 FROM org_members om
+             JOIN organizations o ON o.id = om.org_id
+             WHERE om.user_id = $2 AND om.status = 'active' AND o.owner_id = d.user_id
+           )
+         )`,
+        [session.dataset_id, req.user.id]
       );
+      if (dsResult.rows.length === 0) return res.status(404).json({ error: 'Dataset not found' });
       if (dsResult.rows.length > 0) {
         const ds = dsResult.rows[0];
         let sampleRows = '';
 
         // قراءة عينة من الصفوف الأولى من الملف الحقيقي لتوفير سياق دقيق للذكاء الاصطناعي
+        let source;
         try {
           const fs = require('fs');
-          if (ds.file_path && fs.existsSync(ds.file_path) && (ds.format === 'csv' || ds.format === 'tsv')) {
-            const content = fs.readFileSync(ds.file_path, 'utf8');
-            const lines = content.split(/\r?\n/).filter(l => l.trim()).slice(0, 40);
-            sampleRows = lines.join('\n');
+          source = await materialize(ds.storage_key, ds.file_path);
+          if (source.path && (ds.format === 'csv' || ds.format === 'tsv')) {
+            const content = fs.readFileSync(source.path, 'utf8');
+            const lines = content.split(/\r?\n/).filter(l => l.trim()).slice(0, 20);
+            sampleRows = lines.join('\n')
+              .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email redacted]')
+              .replace(/\b(?:\+?\d[\d ()-]{7,}\d)\b/g, '[phone redacted]');
           }
         } catch (fileErr) {
           console.warn('Could not read sample rows for chat:', fileErr.message);
+        } finally {
+          if (source?.temporary) await deleteTemporaryFile(source.path);
         }
 
         datasetContext = {

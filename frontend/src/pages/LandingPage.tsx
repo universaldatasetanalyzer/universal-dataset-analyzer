@@ -10,24 +10,24 @@ import { useStore } from '../store';
 const fadeUp = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0 } };
 
 const FEATURES = [
-  { icon: <Database className="w-6 h-6" />, title: 'Smart Data Ingestion', desc: 'Upload CSV, Excel, JSON, and Parquet files. Automatic schema detection, type inference, and validation.', color: 'from-brand-500 to-brand-600' },
+  { icon: <Database className="w-6 h-6" />, title: 'Smart Data Ingestion', desc: 'Upload CSV, Excel, or JSON files with automatic schema detection, type inference, and validation.', color: 'from-brand-500 to-brand-600' },
   { icon: <ShieldCheck className="w-6 h-6" />, title: 'Quality Analysis', desc: 'Detect missing values, outliers, duplicates, and format errors with a comprehensive health score.', color: 'from-emerald-500 to-emerald-600' },
   { icon: <Wand2 className="w-6 h-6" />, title: 'AI Cleaning Wizard', desc: 'Get intelligent recommendations and apply cleaning actions with a single click. Before/after preview.', color: 'from-accent-500 to-accent-600' },
   { icon: <BarChart3 className="w-6 h-6" />, title: 'Interactive Charts', desc: 'Histograms, scatter plots, heatmaps, box plots — all interactive with smart filters.', color: 'from-amber-500 to-amber-600' },
-  { icon: <Sparkles className="w-6 h-6" />, title: 'AI-Powered Insights', desc: 'GPT-powered analysis that surfaces trends, anomalies, correlations, and executive summaries.', color: 'from-purple-500 to-purple-600' },
+  { icon: <Sparkles className="w-6 h-6" />, title: 'AI-Powered Insights', desc: 'AI-assisted analysis that surfaces trends, anomalies, correlations, and executive summaries.', color: 'from-purple-500 to-purple-600' },
   { icon: <MessageSquare className="w-6 h-6" />, title: 'Chat with Your Data', desc: 'Ask questions in plain English and get instant answers, complete with charts and summaries.', color: 'from-rose-500 to-rose-600' },
 ];
 
 const FAQS = [
-  { q: 'What file formats are supported?', a: 'CSV, Excel (.xlsx), JSON, and Apache Parquet. We\'re adding SQL and Avro support soon.' },
-  { q: 'Is my data secure?', a: 'Yes. All data is encrypted in transit and at rest. We\'re SOC 2 Type II compliant and never sell your data.' },
+  { q: 'What file formats are supported?', a: 'CSV, Excel (.xlsx and .xls), TSV, and JSON.' },
+  { q: 'Is my data secure?', a: 'Datasets are private to your account or authorized workspace members. Review our privacy policy before uploading sensitive data.' },
   { q: 'Can I collaborate with my team?', a: 'Yes. The Pro plan includes team management with role-based permissions.' },
-  { q: 'Is there an API available?', a: 'API access is available as part of the Pro workspace.' },
-  { q: 'What\'s the maximum file size?', a: 'The Pro plan supports files up to 500MB per upload.' },
+  { q: 'Is there an API available?', a: 'The beta currently provides the web application workflow; public API access is not included.' },
+  { q: 'What\'s the maximum file size?', a: 'Uploads are subject to the current beta file, row, column, and storage limits.' },
 ];
 
 const ARABIC_FEATURE_TEXT: Record<string, { title: string; desc: string }> = {
-  'Smart Data Ingestion': { title: 'إدخال ذكي للبيانات', desc: 'ارفع ملفات CSV وExcel وJSON وParquet مع اكتشاف المخطط والتحقق من الأنواع تلقائيًا.' },
+  'Smart Data Ingestion': { title: 'إدخال ذكي للبيانات', desc: 'ارفع ملفات CSV وExcel وJSON مع اكتشاف المخطط والتحقق من الأنواع تلقائيًا.' },
   'Quality Analysis': { title: 'تحليل الجودة', desc: 'اكتشف القيم المفقودة والقيم الشاذة والتكرارات وأخطاء التنسيق مع درجة صحة شاملة.' },
   'AI Cleaning Wizard': { title: 'مساعد التنظيف الذكي', desc: 'احصل على توصيات ذكية وطبّق إجراءات التنظيف بنقرة واحدة مع معاينة قبل وبعد.' },
   'Interactive Charts': { title: 'رسوم بيانية تفاعلية', desc: 'مخططات توزيع وتبعثر وخرائط حرارية ورسوم صندوقية مع فلاتر ذكية.' },
@@ -100,8 +100,8 @@ export const LandingPage: React.FC = () => {
               <Link to="/register" className="btn-primary text-base px-8 py-3.5 flex items-center gap-2">
                 {isArabic ? 'ابدأ مجانًا' : 'Start for Free'} <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link to="/dashboard" className="btn-secondary text-base px-8 py-3.5">
-                {isArabic ? 'شاهد العرض التجريبي' : 'View Live Demo'}
+              <Link to="/register" className="btn-secondary text-base px-8 py-3.5">
+                {isArabic ? 'جرّب باستخدام بياناتك' : 'Try with your data'}
               </Link>
             </motion.div>
           </motion.div>
@@ -160,7 +160,7 @@ export const LandingPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {[
               { name: 'Free Demo', price: '$0', period: 'forever', features: ['Demo dataset', 'Quality reports', 'AI insights preview'], cta: 'Get Started Free', highlight: false },
-              { name: 'Pro', price: '$10', period: '/month or $96/year', features: ['Unlimited dataset uploads', 'Quality checks and cleaning', 'Visualizations and charts', 'AI insights and chat', 'Full report generation'], cta: 'Subscribe', highlight: true },
+              { name: 'Pro', price: '$10', period: '/month or $96/year', features: ['Dataset uploads within beta limits', 'Quality checks and cleaning', 'Visualizations and charts', 'AI insights and chat', 'HTML report generation'], cta: 'Subscribe', highlight: true },
             ].map((plan, i) => (
               <motion.div key={plan.name} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }}>
                 <div className={`card p-6 relative ${plan.highlight ? 'border-2 border-brand-500 bg-gradient-to-b from-brand-50/60 dark:from-brand-950/30' : ''}`}>
@@ -213,7 +213,7 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-3xl mx-auto text-center">
           <div className="card p-12 bg-gradient-to-br from-brand-600 to-accent-600 border-0 text-white">
             <h2 className="text-4xl font-display font-bold mb-4">{isArabic ? 'ابدأ تحليل بياناتك اليوم' : 'Start analyzing your data today'}</h2>
-            <p className="text-white/80 mb-8">{isArabic ? 'انضم إلى آلاف المحللين وعلماء البيانات الذين يثقون في Universal Analyzer.' : 'Join thousands of analysts and data scientists who trust Universal Analyzer.'}</p>
+            <p className="text-white/80 mb-8">{isArabic ? 'ابدأ بتحليل بياناتك واكتشف رؤى واضحة خلال دقائق.' : 'Start with your own data and turn it into clear, useful insights.'}</p>
             <Link to="/register" className="inline-flex items-center gap-2 bg-white text-brand-700 font-semibold px-8 py-3.5 rounded-xl hover:bg-brand-50 transition-colors">
               {isArabic ? 'ابدأ مجانًا' : 'Get Started Free'} <ArrowRight className="w-4 h-4" />
             </Link>
@@ -224,11 +224,16 @@ export const LandingPage: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-surface-200 dark:border-surface-800 py-12 px-6">
         <div className="max-w-6xl mx-auto flex flex-col items-center gap-4 text-center">
-          <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
               <Database className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="font-display font-bold text-sm">UniversalAnalyzer</span>
+          </div>
+          <div className="flex gap-4 text-xs text-surface-400">
+            <Link to="/privacy" className="hover:text-surface-600">Privacy</Link>
+            <Link to="/terms" className="hover:text-surface-600">Terms</Link>
+            <Link to="/support" className="hover:text-surface-600">Support</Link>
           </div>
           <p className="text-xs text-surface-400">© 2026 Universal Analyzer. All rights reserved.</p>
         </div>
