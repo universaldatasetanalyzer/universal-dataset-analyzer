@@ -124,9 +124,10 @@ async function register(req, res, next) {
         console.error('Failed to send verification email:', emailErr.message);
       }
 
-      const token = generateToken(user.id);
-      const plan  = await getUserPlan(user.id);
-      res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, plan } });
+      res.status(201).json({
+        message: 'Account created. Please verify your email to continue.',
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      });
     } catch (transactionError) {
       await client.query('ROLLBACK');
       throw transactionError;

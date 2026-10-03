@@ -2,7 +2,7 @@ import React from 'react';
 import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
 import { LandingPage } from '../pages/LandingPage';
-import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage, GoogleCallbackPage } from '../pages/AuthPages';
+import { LoginPage, RegisterPage, ConfirmEmailPage, ForgotPasswordPage, ResetPasswordPage, GoogleCallbackPage } from '../pages/AuthPages';
 import { AcceptInvitePage } from '../pages/AcceptInvitePage';
 import { PrivacyPage, TermsPage, SupportPage } from '../pages/LegalPages';
 import { DashboardPage } from '../pages/DashboardPage';
@@ -59,6 +59,7 @@ const router = createBrowserRouter([
   { path: '/',                element: <LandingPage /> },
   { path: '/login',           element: <LoginPage /> },
   { path: '/register',        element: <RegisterPage /> },
+  { path: '/confirm-email',      element: <ConfirmEmailPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password',  element: <ResetPasswordPage /> },
   { path: '/accept-invite',         element: <AcceptInvitePage /> },

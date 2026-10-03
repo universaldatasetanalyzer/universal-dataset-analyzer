@@ -121,7 +121,6 @@ export const LoginPage: React.FC = () => {
   const [error, setError]       = useState(() => oauthError ? `Google sign-in failed: ${oauthError.replace(/_/g, ' ')}` : '');
   const navigate = useNavigate();
   const { setAuthUser } = useStore();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setLoading(true);
     try {
@@ -174,10 +173,9 @@ export const RegisterPage: React.FC = () => {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw]     = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
   const navigate = useNavigate();
-  const { setAuthUser } = useStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError('');
@@ -186,8 +184,7 @@ export const RegisterPage: React.FC = () => {
     setLoading(true);
     try {
       const res = await authApi.register({ name, email, password });
-      authApi.setToken(res.token); authApi.setUser(res.user); setAuthUser(res.user);
-      navigate('/dashboard');
+      navigate(`/confirm-email?email=${encodeURIComponent(res.user.email)}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally { setLoading(false); }
@@ -229,6 +226,110 @@ export const RegisterPage: React.FC = () => {
           <Link to="/login" className="text-brand-500 hover:text-brand-600 font-medium">Sign in</Link>
         </p>
       </form>
+    </AuthCard>
+  );
+};
+
+// ── Confirm Email ────────────────────────────────────────────────────────────
+export const ConfirmEmailPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const email = searchParams.get('email') || '';
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [seconds, setSeconds] = useState(60);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!seconds) return undefined;
+    const timer = window.setInterval(() => setSeconds(value => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [seconds]);
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!/^\d{6}$/.test(code)) {
+      setError('Enter the 6-digit verification code.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await authApi.verifyEmail(email, code);
+      setDone(true);
+      window.setTimeout(() => navigate('/login'), 1800);
+    } catch (err: unknown) {
+      setCode('');
+      setError(err instanceof Error ? err.message : 'Invalid or expired verification code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError('');
+    setResending(true);
+    try {
+      await authApi.resendVerification(email);
+      setCode('');
+      setSeconds(60);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to resend verification code');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  if (!email) {
+    return (
+      <AuthCard title="Confirm your email" subtitle="The verification email link is missing an address.">
+        <Link to="/register" className="btn-primary w-full text-center py-2.5 block">Create an account</Link>
+      </AuthCard>
+    );
+  }
+
+  return (
+    <AuthCard title="Confirm your email" subtitle={`Enter the 6-digit code sent to ${email}`}>
+      {done ? (
+        <div className="text-center py-4">
+          <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/30 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-7 h-7 text-emerald-500" />
+          </div>
+          <p className="text-sm font-medium mb-1">Email verified!</p>
+          <p className="text-sm text-surface-500">Redirecting you to sign in…</p>
+        </div>
+      ) : (
+        <form onSubmit={handleVerify} className="space-y-4">
+          {error && <ErrorBox msg={error} />}
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Verification code</label>
+            <input
+              value={code}
+              onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="000000"
+              required
+              autoFocus
+              className="input w-full text-center tracking-[0.5em] text-lg"
+            />
+          </div>
+          <button type="submit" disabled={loading || code.length !== 6} className="btn-primary w-full justify-center py-2.5 disabled:opacity-50">
+            {loading ? 'Verifying...' : 'Verify email'}
+          </button>
+          <div className="text-center text-sm text-surface-500">
+            Didn’t receive a code?{' '}
+            <button type="button" onClick={handleResend} disabled={resending || seconds > 0}
+              className="text-brand-500 hover:text-brand-600 font-medium disabled:text-surface-400">
+              {resending ? 'Sending...' : seconds > 0 ? `Resend in ${seconds}s` : 'Resend code'}
+            </button>
+          </div>
+          <Link to="/login" className="text-center text-sm text-brand-500 hover:text-brand-600 block">Back to sign in</Link>
+        </form>
+      )}
     </AuthCard>
   );
 };

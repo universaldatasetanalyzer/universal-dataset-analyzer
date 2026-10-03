@@ -26,6 +26,20 @@ const rateLimits = {
     legacyHeaders: false,
     message: { error: 'Too many password reset requests. Please try again later.' },
   }),
+  emailVerification: rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many verification attempts. Please try again later.' },
+  }),
+  resendVerification: rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many verification emails requested. Please try again later.' },
+  }),
   uploads: expensive(60 * 60 * 1000, 10, 'Upload limit reached. Please try again later.'),
 };
 

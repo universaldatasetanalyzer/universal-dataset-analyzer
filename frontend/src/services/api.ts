@@ -139,7 +139,7 @@ export interface AuthUser {
 
 export const authApi = {
   register: (data: { name: string; email: string; password: string }) =>
-    request<{ token: string; user: AuthUser }>('/auth/register', { method: 'POST', body: data }),
+    request<{ message: string; user: AuthUser }>('/auth/register', { method: 'POST', body: data }),
 
   login: (data: { email: string; password: string }) =>
     request<{ token: string; user: AuthUser }>('/auth/login', { method: 'POST', body: data }),
@@ -148,6 +148,12 @@ export const authApi = {
 
   forgotPassword: (email: string) =>
     request('/auth/forgot-password', { method: 'POST', body: { email } }),
+
+  verifyEmail: (email: string, code: string) =>
+    request<{ message: string }>('/auth/verify-email', { method: 'POST', body: { email, code } }),
+
+  resendVerification: (email: string) =>
+    request<{ message: string }>('/auth/resend-verification', { method: 'POST', body: { email } }),
 
   resetPassword: (token: string, password: string) =>
     request('/auth/reset-password', { method: 'POST', body: { token, password } }),
