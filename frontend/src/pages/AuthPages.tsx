@@ -183,8 +183,8 @@ export const RegisterPage: React.FC = () => {
     if (pwError) { setError(pwError); return; }
     setLoading(true);
     try {
-      const res = await authApi.register({ name, email, password });
-      navigate(`/confirm-email?email=${encodeURIComponent(res.user.email)}`);
+      await authApi.register({ name, email, password });
+      navigate('/confirm-email?email=' + encodeURIComponent(email));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally { setLoading(false); }
