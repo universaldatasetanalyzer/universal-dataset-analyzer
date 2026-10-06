@@ -188,8 +188,23 @@ const migrations = [
 
   // Indexes
   `CREATE INDEX IF NOT EXISTS idx_datasets_user_id ON datasets(user_id)`,
-  `CREATE INDEX IF NOT EXISTS idx_subscriptions_paddle_sub_id ON subscriptions(paddle_subscription_id)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_paddle_sub_unique ON subscriptions(paddle_subscription_id) WHERE paddle_subscription_id IS NOT NULL`,
+  `DROP INDEX IF EXISTS idx_subscriptions_paddle_sub_id`,
+  `DO $$
+   BEGIN
+     IF EXISTS (
+       SELECT 1
+       FROM pg_index i
+       JOIN pg_class c ON c.oid = i.indexrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND c.relname = 'idx_subscriptions_paddle_sub_unique'
+         AND i.indpred IS NOT NULL
+     ) THEN
+       DROP INDEX public.idx_subscriptions_paddle_sub_unique;
+     END IF;
+   END
+   $$`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_paddle_sub_unique ON subscriptions(paddle_subscription_id)`,
   `CREATE INDEX IF NOT EXISTS idx_subscriptions_paddle_customer_id ON subscriptions(paddle_customer_id)`,
   `CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email)`,
   `CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC)`,
