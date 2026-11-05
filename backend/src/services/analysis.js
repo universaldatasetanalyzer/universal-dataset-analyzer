@@ -8,30 +8,68 @@ const { acquireAnalysisSlot, validateShape } = require('./resourceLimits');
 
 const PYTHON_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
+function isTransientPythonError(error) {
+  return ['ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT', 'EAI_AGAIN'].includes(error?.code);
+}
+
+function isTransientPythonStatus(status) {
+  return [502, 503, 504].includes(status);
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function callPython(endpoint, filePath, fields) {
-  const form = new FormData();
-  form.append('file', fs.createReadStream(filePath));
+  const maxAttempts = 4;
+  const retryDelays = [2000, 5000, 10000];
+  let lastError;
 
-  for (const [key, value] of Object.entries(fields)) {
-    form.append(key, typeof value === 'string' ? value : JSON.stringify(value));
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    // A multipart request body cannot be reused after a failed request because
+    // its file stream has already been consumed.
+    const form = new FormData();
+    form.append('file', fs.createReadStream(filePath));
+
+    for (const [key, value] of Object.entries(fields)) {
+      form.append(key, typeof value === 'string' ? value : JSON.stringify(value));
+    }
+
+    try {
+      const response = await fetch(`${PYTHON_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          ...form.getHeaders(),
+          ...(process.env.PYTHON_SERVICE_TOKEN ? { 'x-internal-service-token': process.env.PYTHON_SERVICE_TOKEN } : {}),
+        },
+        body: form,
+        timeout: 120000,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        const error = new Error(`Python service error: ${response.status} - ${text}`);
+        error.status = response.status;
+        throw error;
+      }
+
+      return response.json();
+    } catch (error) {
+      lastError = error;
+      const shouldRetry = attempt < maxAttempts
+        && (isTransientPythonError(error) || isTransientPythonStatus(error.status));
+
+      if (!shouldRetry) throw error;
+
+      console.warn(
+        `Python service request ${endpoint} failed (attempt ${attempt}/${maxAttempts}); retrying in ${retryDelays[attempt - 1]}ms:`,
+        error.message
+      );
+      await wait(retryDelays[attempt - 1]);
+    }
   }
 
-  const response = await fetch(`${PYTHON_URL}${endpoint}`, {
-    method: 'POST',
-    headers: {
-      ...form.getHeaders(),
-      ...(process.env.PYTHON_SERVICE_TOKEN ? { 'x-internal-service-token': process.env.PYTHON_SERVICE_TOKEN } : {}),
-    },
-    body: form,
-    timeout: 120000,
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Python service error: ${response.status} - ${text}`);
-  }
-
-  return response.json();
+  throw lastError;
 }
 
 async function analyzeDataset(datasetId, filePath, format, storageKey) {
