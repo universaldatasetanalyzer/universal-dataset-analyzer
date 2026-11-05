@@ -1,12 +1,17 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const https = require('https');
 const FormData = require('form-data');
 const { query } = require('../db');
 const { createNotification } = require('./notifications');
-const { provider, putFile, createObjectKey, deleteObject, deleteTemporaryFile } = require('./storage');
+const { provider, putFile, putBuffer, createObjectKey, deleteObject, deleteTemporaryFile } = require('./storage');
 const { acquireAnalysisSlot, validateShape } = require('./resourceLimits');
 
-const PYTHON_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+const PYTHON_URL = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
+const httpAgent = new http.Agent({ keepAlive: false });
+const httpsAgent = new https.Agent({ keepAlive: false });
 
 function isTransientPythonError(error) {
   return ['ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT', 'EAI_AGAIN'].includes(error?.code);
@@ -20,9 +25,36 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function callPython(endpoint, filePath, fields) {
+function getFormDataLength(form) {
+  return new Promise((resolve, reject) => {
+    form.getLength((error, length) => {
+      if (error) reject(error);
+      else resolve(length);
+    });
+  });
+}
+
+async function warmPythonService(requestId) {
+  const startedAt = Date.now();
+  const isHttps = PYTHON_URL.startsWith('https://');
+  const response = await fetch(`${PYTHON_URL}/health`, {
+    headers: requestId ? { 'x-request-id': requestId } : {},
+    agent: isHttps ? httpsAgent : httpAgent,
+    timeout: 90000,
+  });
+  if (!response.ok) {
+    const error = new Error(`Python health check failed: ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  console.log(`[${requestId || 'no-request-id'}] [PythonService] HEALTHY (${Date.now() - startedAt}ms)`);
+}
+
+async function callPython(endpoint, filePath, fields, options = {}) {
   const maxAttempts = 4;
-  const retryDelays = [2000, 5000, 10000];
+  // Render free services can take 50+ seconds to wake up. Keep the
+  // multipart request retry window long enough to span that cold start.
+  const retryDelays = [5000, 15000, 30000];
   let lastError;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -36,13 +68,19 @@ async function callPython(endpoint, filePath, fields) {
     }
 
     try {
+      await warmPythonService(options.requestId);
+      const formLength = await getFormDataLength(form);
+      const isHttps = PYTHON_URL.startsWith('https://');
       const response = await fetch(`${PYTHON_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           ...form.getHeaders(),
+          'Content-Length': String(formLength),
+          ...(options.requestId ? { 'x-request-id': options.requestId } : {}),
           ...(process.env.PYTHON_SERVICE_TOKEN ? { 'x-internal-service-token': process.env.PYTHON_SERVICE_TOKEN } : {}),
         },
         body: form,
+        agent: isHttps ? httpsAgent : httpAgent,
         timeout: 120000,
       });
 
@@ -146,21 +184,29 @@ async function analyzeDataset(datasetId, filePath, format, storageKey) {
   }
 }
 
-async function cleanDataset(datasetId, filePath, operations) {
+async function cleanDataset(datasetId, filePath, operations, options = {}) {
   let releaseSlot = () => {};
   try {
     releaseSlot = acquireAnalysisSlot();
     const result = await callPython('/clean', filePath, {
       operations,
       datasetId,
-      format: require('path').extname(filePath).slice(1),
-    });
-    if (result.cleanedFilePath) {
+      format: path.extname(filePath).slice(1) || 'csv',
+    }, options);
+    if (result.cleanedDataBase64) {
+      const format = result.cleanedFormat || path.extname(filePath).slice(1) || 'csv';
+      const buffer = Buffer.from(result.cleanedDataBase64, 'base64');
+      const storageKey = createObjectKey(datasetId, `cleaned.${format}`, 'cleaned');
+      const stored = await putBuffer(buffer, storageKey);
+      result.cleanedStorageKey = storageKey;
+      result.cleanedFilePath = stored.path || storageKey;
+      delete result.cleanedDataBase64;
+    } else if (result.cleanedFilePath && fs.existsSync(result.cleanedFilePath)) {
       const temporaryPath = result.cleanedFilePath;
       const storageKey = createObjectKey(datasetId, temporaryPath, 'cleaned');
       const stored = await putFile(temporaryPath, storageKey);
       result.cleanedStorageKey = storageKey;
-      result.cleanedFilePath = stored.path;
+      result.cleanedFilePath = stored.path || storageKey;
       await deleteTemporaryFile(temporaryPath);
     }
     return result;

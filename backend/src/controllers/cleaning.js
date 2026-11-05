@@ -42,7 +42,7 @@ async function previewClean(req, res, next) {
 
     const source = await materialize(ds.storage_key, ds.file_path);
     try {
-      const result = await cleanDataset(ds.id, source.path, { ...req.body.operations, preview: true });
+      const result = await cleanDataset(ds.id, source.path, { ...req.body.operations, preview: true }, { requestId: req.id });
       res.json(result);
     } finally {
       if (source.temporary) await deleteTemporaryFile(source.path);
@@ -62,7 +62,7 @@ async function applyClean(req, res, next) {
     const source = await materialize(ds.storage_key, ds.file_path);
     let result;
     try {
-      result = await cleanDataset(ds.id, source.path, { ...req.body.operations, preview: false });
+      result = await cleanDataset(ds.id, source.path, { ...req.body.operations, preview: false }, { requestId: req.id });
     } finally {
       if (source.temporary) await deleteTemporaryFile(source.path);
     }

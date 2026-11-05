@@ -10,6 +10,7 @@ import json
 import tempfile
 import shutil
 import hmac
+import base64
 from pathlib import Path
 
 MAX_ROWS = int(os.getenv("MAX_DATASET_ROWS", "1000000"))
@@ -752,6 +753,9 @@ async def clean(
                 df.to_csv(clean_path, index=False)
 
             result["cleanedFilePath"] = clean_path
+            with open(clean_path, "rb") as cleaned_file:
+                result["cleanedDataBase64"] = base64.b64encode(cleaned_file.read()).decode("ascii")
+            result["cleanedFormat"] = suffix.lstrip(".") or "csv"
             result["preview"]         = df.head(10).replace({np.nan: None}).to_dict('records')
             # BUG FIX: to_dict كان بيبعت NaN وده مش valid JSON
         else:
