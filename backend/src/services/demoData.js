@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { query } = require('../db');
 const { analyzeDataset } = require('./analysis');
+const { putFile, createObjectKey, deleteObject, provider } = require('./storage');
 
 const DEMO_SOURCE = path.join(__dirname, '../data/demo-dataset.csv');
 const DEMO_DISPLAY_NAME = 'Demo Dataset — Try it out';
@@ -15,6 +16,7 @@ const DEMO_DISPLAY_NAME = 'Demo Dataset — Try it out';
 async function seedDemoDataset(userId, db = { query }, options = {}) {
   const { startAnalysis = true, throwOnError = false } = options;
   let destPath;
+  let storageKey;
   try {
     if (!fs.existsSync(DEMO_SOURCE)) {
       console.error('Demo dataset source file missing at', DEMO_SOURCE);
@@ -29,27 +31,32 @@ async function seedDemoDataset(userId, db = { query }, options = {}) {
     destPath = path.resolve(path.join(userDir, filename));
     fs.copyFileSync(DEMO_SOURCE, destPath);
     const { size } = fs.statSync(destPath);
+    storageKey = createObjectKey(userId, 'demo-sales-data.csv');
+    await putFile(destPath, storageKey);
 
     const result = await db.query(
-      `INSERT INTO datasets (user_id, name, original_name, file_path, file_size, format, status, is_demo)
-       VALUES ($1, $2, $3, $4, $5, 'csv', 'processing', true)
+      `INSERT INTO datasets (user_id, name, original_name, file_path, storage_key, file_size, format, status, is_demo)
+       VALUES ($1, $2, $3, $4, $5, $6, 'csv', 'processing', true)
        RETURNING id`,
-      [userId, DEMO_DISPLAY_NAME, 'demo-sales-data.csv', destPath, size]
+      [userId, DEMO_DISPLAY_NAME, 'demo-sales-data.csv', destPath, storageKey, size]
     );
 
     const datasetId = result.rows[0].id;
 
     if (startAnalysis) {
-      analyzeDataset(datasetId, destPath, 'csv').catch(err => {
+      analyzeDataset(datasetId, destPath, 'csv', storageKey).catch(err => {
         console.error('Demo dataset analysis failed for user', userId, err.message);
       });
     }
 
-    return { datasetId, filePath: destPath, format: 'csv' };
+    return { datasetId, filePath: destPath, storageKey, format: 'csv' };
   } catch (err) {
     console.error('Failed to seed demo dataset for user', userId, err.message);
     if (throwOnError) {
       if (destPath && fs.existsSync(destPath)) fs.unlinkSync(destPath);
+      if (storageKey && provider === 's3') {
+        try { await deleteObject(storageKey); } catch { /* best-effort cleanup */ }
+      }
       throw err;
     }
     return null;
