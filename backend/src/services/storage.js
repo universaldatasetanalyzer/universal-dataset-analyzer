@@ -216,7 +216,17 @@ function getLocalPath(objectKey) {
 
 async function materialize(objectKey, fallbackPath) {
   if (provider === 'local') return { path: fallbackPath || localPathForKey(objectKey), temporary: false };
-  if (!objectKey && fallbackPath) return { path: fallbackPath, temporary: false };
+  if (!objectKey && fallbackPath && fs.existsSync(fallbackPath)) return { path: fallbackPath, temporary: false };
+
+  // إذا كان storageKey غير موجود لكن الملف هو Demo Dataset الأصلي
+  const demoFallback = path.join(__dirname, '../data/demo-dataset.csv');
+  if (!objectKey && fs.existsSync(demoFallback)) {
+    return { path: demoFallback, temporary: false };
+  }
+
+  if (!objectKey) {
+    throw new Error('Dataset file is unavailable in storage');
+  }
 
   const tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'uda-storage-'));
   const tempPath = path.join(tempDir, `object${path.extname(String(objectKey || ''))}`);
