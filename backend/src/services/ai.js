@@ -1,11 +1,26 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const API_KEY = process.env.GEMINI_API_KEY;
-const MODEL   = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+const MODEL   = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+const FALLBACK_MODELS = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash-lite', 'gemini-3.6-flash'];
 
 function getClient() {
   if (!API_KEY || API_KEY === 'your-gemini-api-key') return null;
   return new GoogleGenerativeAI(API_KEY);
+}
+
+async function callWithFallback(createOperation) {
+  const modelsToTry = [MODEL, ...FALLBACK_MODELS.filter(m => m !== MODEL)];
+  let lastErr;
+  for (const modelName of modelsToTry) {
+    try {
+      return await createOperation(modelName);
+    } catch (err) {
+      lastErr = err;
+      console.warn(`Gemini model ${modelName} failed (${err.message}). Trying fallback if available...`);
+    }
+  }
+  throw lastErr;
 }
 
 // ── Chat with Dataset ─────────────────────────────────────────────────────────
@@ -48,21 +63,21 @@ ${datasetContext.sampleRows ? `=== عينة من بيانات الصفوف ال�
 
   try {
     const genAI = client;
-    const model = genAI.getGenerativeModel({
-      model: MODEL,
-      systemInstruction: systemPrompt,
-    });
-
-    // تحويل الرسائل السابقة لـ Gemini format
     const history = messages.slice(0, -1).map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
-
-    const chat    = model.startChat({ history });
     const lastMsg = messages[messages.length - 1].content;
-    const result  = await chat.sendMessage(lastMsg);
-    return result.response.text();
+
+    return await callWithFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: systemPrompt,
+      });
+      const chat = model.startChat({ history });
+      const result = await chat.sendMessage(lastMsg);
+      return result.response.text();
+    });
   } catch (err) {
     console.error('Gemini chat error:', err.message);
     throw new Error(`Gemini API error: ${err.message}`);
@@ -131,16 +146,17 @@ Return ONLY a valid JSON object with this exact structure, no markdown, no expla
 
   try {
     const genAI = client;
-    const model = genAI.getGenerativeModel({
-      model: MODEL,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.3,
-      },
+    const text = await callWithFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.3,
+        },
+      });
+      const result = await model.generateContent(prompt);
+      return result.response.text();
     });
-
-    const result = await model.generateContent(prompt);
-    const text   = result.response.text();
     return { ...JSON.parse(text), _language: datasetContext.language || 'en' };
   } catch (err) {
     console.error('Gemini insights error:', err.message);

@@ -54,7 +54,7 @@ services:
       - key: PYTHON_SERVICE_TOKEN
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-3.6-flash
+        value: gemini-3.1-flash-lite
       - key: STORAGE_PROVIDER
         value: s3
       - key: STORAGE_ENDPOINT
