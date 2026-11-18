@@ -59,6 +59,6 @@ export const useStore = create<AppState>()(
       authUser: null,
       setAuthUser: (user) => set({ authUser: user }),
     }),
-    { name: 'uda-store', partialize: (s) => ({ language: s.language, theme: s.theme, sidebarCollapsed: s.sidebarCollapsed, authUser: s.authUser }) }
+    { name: 'uda-store', partialize: (s) => ({ language: s.language, theme: s.theme, sidebarCollapsed: s.sidebarCollapsed, authUser: s.authUser, selectedDataset: s.selectedDataset }) }
   )
 );

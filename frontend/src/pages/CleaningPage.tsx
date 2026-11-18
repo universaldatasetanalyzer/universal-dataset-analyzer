@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Wand2, Play, Eye, Download, CheckCircle2, RefreshCw, Database, AlertCircle } from 'lucide-react';
+import { Wand2, Play, Eye, Download, CheckCircle2, RefreshCw, Database, AlertCircle, Loader2 } from 'lucide-react';
 import { Card, Badge } from '../components/ui';
 import { cleaningApi, datasetsApi, type Column, type CleanOperations, type CleanResult } from '../services/api';
 import { useStore } from '../store';
@@ -10,6 +10,7 @@ export const CleaningPage: React.FC = () => {
   const [columns, setColumns] = useState<Column[]>([]);
   const [applying, setApplying] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CleanResult | null>(null);
   const [error, setError] = useState('');
 
@@ -23,10 +24,17 @@ export const CleaningPage: React.FC = () => {
 
   useEffect(() => {
     if (!selectedDataset) return;
-    datasetsApi.getSummary(selectedDataset.id).then((data: unknown) => {
-      const summary = data as { columns: Column[] };
-      if (summary?.columns) setColumns(summary.columns);
-    });
+    setLoading(true);
+    setError('');
+    datasetsApi.getSummary(selectedDataset.id)
+      .then((data: unknown) => {
+        const summary = data as { columns: Column[] };
+        if (summary?.columns) setColumns(summary.columns);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'Failed to load dataset columns. Please try again.');
+      })
+      .finally(() => setLoading(false));
   }, [selectedDataset?.id]);
 
   const setFillMethod = (col: string, method: string) => {
@@ -78,6 +86,14 @@ export const CleaningPage: React.FC = () => {
     <div className="flex flex-col items-center justify-center h-64 text-center">
       <Database className="w-12 h-12 text-surface-300 mb-3" />
       <h2 className="font-semibold mb-1">No dataset selected</h2>
+      <p className="text-sm text-surface-500 mt-1">Go to <a href="/upload" className="text-brand-500 hover:underline">My Datasets</a> and select a dataset first.</p>
+    </div>
+  );
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center h-64 text-center">
+      <Loader2 className="w-10 h-10 text-brand-500 animate-spin mb-3" />
+      <p className="text-sm text-surface-500">Loading dataset columns...</p>
     </div>
   );
 

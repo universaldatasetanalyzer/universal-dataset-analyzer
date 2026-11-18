@@ -18,7 +18,7 @@ function isTransientPythonError(error) {
 }
 
 function isTransientPythonStatus(status) {
-  return [502, 503, 504].includes(status);
+  return [429, 502, 503, 504].includes(status);
 }
 
 function wait(ms) {
@@ -45,6 +45,10 @@ async function warmPythonService(requestId) {
   if (!response.ok) {
     const error = new Error(`Python health check failed: ${response.status}`);
     error.status = response.status;
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('retry-after'), 10);
+      if (retryAfter > 0) error.retryAfter = retryAfter;
+    }
     throw error;
   }
   console.log(`[${requestId || 'no-request-id'}] [PythonService] HEALTHY (${Date.now() - startedAt}ms)`);
@@ -88,6 +92,10 @@ async function callPython(endpoint, filePath, fields, options = {}) {
         const text = await response.text();
         const error = new Error(`Python service error: ${response.status} - ${text}`);
         error.status = response.status;
+        if (response.status === 429) {
+          const retryAfter = parseInt(response.headers.get('retry-after'), 10);
+          if (retryAfter > 0) error.retryAfter = retryAfter;
+        }
         throw error;
       }
 
@@ -99,11 +107,16 @@ async function callPython(endpoint, filePath, fields, options = {}) {
 
       if (!shouldRetry) throw error;
 
+      // Respect Retry-After header for 429 responses, otherwise use default delays
+      const retryAfterMs = error.status === 429 && error.retryAfter
+        ? Math.min(error.retryAfter * 1000, 60000)
+        : retryDelays[attempt - 1];
+
       console.warn(
-        `Python service request ${endpoint} failed (attempt ${attempt}/${maxAttempts}); retrying in ${retryDelays[attempt - 1]}ms:`,
+        `Python service request ${endpoint} failed (attempt ${attempt}/${maxAttempts}); retrying in ${retryAfterMs}ms:`,
         error.message
       );
-      await wait(retryDelays[attempt - 1]);
+      await wait(retryAfterMs);
     }
   }
 
