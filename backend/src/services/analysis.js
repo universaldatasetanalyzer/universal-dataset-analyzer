@@ -9,12 +9,19 @@ const { createNotification } = require('./notifications');
 const { provider, putFile, putBuffer, createObjectKey, deleteObject, deleteTemporaryFile } = require('./storage');
 const { acquireAnalysisSlot, validateShape } = require('./resourceLimits');
 
-const PYTHON_URL = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
+const PYTHON_URL = (process.env.PYTHON_SERVICE_URL || 'https://uda-python-service.onrender.com').replace(/\/+$/, '');
 const httpAgent = new http.Agent({ keepAlive: false });
 const httpsAgent = new https.Agent({ keepAlive: false });
 
 function isTransientPythonError(error) {
-  return ['ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT', 'EAI_AGAIN'].includes(error?.code);
+  return [
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'EPIPE',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+    'TimeoutError',
+  ].includes(error?.code) || error?.name === 'TimeoutError' || error?.message?.includes('timeout') || error?.message?.includes('ECONNRESET');
 }
 
 function isTransientPythonStatus(status) {
@@ -40,7 +47,7 @@ async function warmPythonService(requestId) {
   const response = await fetch(`${PYTHON_URL}/health`, {
     headers: requestId ? { 'x-request-id': requestId } : {},
     agent: isHttps ? httpsAgent : httpAgent,
-    timeout: 90000,
+    signal: AbortSignal.timeout(65000),
   });
   if (!response.ok) {
     const error = new Error(`Python health check failed: ${response.status}`);
@@ -54,38 +61,22 @@ async function warmPythonService(requestId) {
   console.log(`[${requestId || 'no-request-id'}] [PythonService] HEALTHY (${Date.now() - startedAt}ms)`);
 }
 
-async function callPython(endpoint, filePath, fields, options = {}) {
-  const maxAttempts = 4;
-  // Render free services can take 50+ seconds to wake up. Keep the
-  // multipart request retry window long enough to span that cold start.
-  const retryDelays = [5000, 15000, 30000];
+/**
+ * Auto-Wake & Retry wrapper for calling python service endpoints.
+ * Handles Render cold starts (40-50s) with 3 max attempts and 15s delay between retries.
+ */
+async function callPythonWithWakeup(endpoint, options = {}) {
+  const maxAttempts = 3;
+  const retryDelay = 15000;
   let lastError;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    // A multipart request body cannot be reused after a failed request because
-    // its file stream has already been consumed.
-    const form = new FormData();
-    form.append('file', fs.createReadStream(filePath));
-
-    for (const [key, value] of Object.entries(fields)) {
-      form.append(key, typeof value === 'string' ? value : JSON.stringify(value));
-    }
-
     try {
-      await warmPythonService(options.requestId);
-      const formLength = await getFormDataLength(form);
       const isHttps = PYTHON_URL.startsWith('https://');
       const response = await fetch(`${PYTHON_URL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          ...form.getHeaders(),
-          'Content-Length': String(formLength),
-          ...(options.requestId ? { 'x-request-id': options.requestId } : {}),
-          ...(process.env.PYTHON_SERVICE_TOKEN ? { 'x-internal-service-token': process.env.PYTHON_SERVICE_TOKEN } : {}),
-        },
-        body: form,
+        ...options,
         agent: isHttps ? httpsAgent : httpAgent,
-        timeout: 120000,
+        signal: AbortSignal.timeout(65000),
       });
 
       if (!response.ok) {
@@ -99,7 +90,61 @@ async function callPython(endpoint, filePath, fields, options = {}) {
         throw error;
       }
 
-      return response.json();
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      const isTransient = isTransientPythonError(error) || isTransientPythonStatus(error.status);
+      const shouldRetry = attempt < maxAttempts && isTransient;
+
+      if (!shouldRetry) throw error;
+
+      const waitMs = (error.status === 429 && error.retryAfter)
+        ? Math.min(error.retryAfter * 1000, 60000)
+        : retryDelay;
+
+      console.warn(
+        `Python service request ${endpoint} failed (attempt ${attempt}/${maxAttempts}; ECONNRESET/Timeout/ColdStart: ${error.message}). Waiting ${waitMs}ms before retry...`
+      );
+      await wait(waitMs);
+    }
+  }
+
+  throw lastError;
+}
+
+async function callPython(endpoint, filePath, fields, options = {}) {
+  const maxAttempts = 3;
+  const retryDelay = 15000;
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const form = new FormData();
+    form.append('file', fs.createReadStream(filePath));
+
+    for (const [key, value] of Object.entries(fields)) {
+      form.append(key, typeof value === 'string' ? value : JSON.stringify(value));
+    }
+
+    try {
+      try {
+        await warmPythonService(options.requestId);
+      } catch (warmErr) {
+        console.warn(`[PythonService] warm-up failed, proceeding to direct request: ${warmErr.message}`);
+      }
+
+      const formLength = await getFormDataLength(form);
+      const requestHeaders = {
+        ...form.getHeaders(),
+        'Content-Length': String(formLength),
+        ...(options.requestId ? { 'x-request-id': options.requestId } : {}),
+        ...(process.env.PYTHON_SERVICE_TOKEN ? { 'x-internal-service-token': process.env.PYTHON_SERVICE_TOKEN } : {}),
+      };
+
+      return await callPythonWithWakeup(endpoint, {
+        method: 'POST',
+        headers: requestHeaders,
+        body: form,
+      });
     } catch (error) {
       lastError = error;
       const shouldRetry = attempt < maxAttempts
@@ -107,16 +152,15 @@ async function callPython(endpoint, filePath, fields, options = {}) {
 
       if (!shouldRetry) throw error;
 
-      // Respect Retry-After header for 429 responses, otherwise use default delays
-      const retryAfterMs = error.status === 429 && error.retryAfter
+      const waitMs = (error.status === 429 && error.retryAfter)
         ? Math.min(error.retryAfter * 1000, 60000)
-        : retryDelays[attempt - 1];
+        : retryDelay;
 
       console.warn(
-        `Python service request ${endpoint} failed (attempt ${attempt}/${maxAttempts}); retrying in ${retryAfterMs}ms:`,
+        `Python service multipart request ${endpoint} failed (attempt ${attempt}/${maxAttempts}); retrying in ${waitMs}ms:`,
         error.message
       );
-      await wait(retryAfterMs);
+      await wait(waitMs);
     }
   }
 

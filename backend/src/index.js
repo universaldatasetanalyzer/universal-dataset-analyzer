@@ -100,10 +100,28 @@ app.use('/api', routes);
 app.use(notFound);
 app.use(errorHandler);
 
+// Startup background wake-up for Python microservice on Render (Cold start handling)
+async function wakePythonService() {
+  const pythonUrl = (process.env.PYTHON_SERVICE_URL || 'https://uda-python-service.onrender.com').replace(/\/+$/, '');
+  try {
+    console.log(`[PythonService] Initiating startup wake-up call to ${pythonUrl}/docs ...`);
+    const res = await fetch(`${pythonUrl}/docs`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(60000),
+    });
+    console.log(`[PythonService] Startup wake-up response: ${res.status}`);
+  } catch (err) {
+    console.warn(`[PythonService] Startup wake-up ping finished/timed out: ${err.message}`);
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🗄️  Database: ${databaseInfo.host}:${databaseInfo.port}/${databaseInfo.database}`);
+  
+  // Trigger non-blocking wake-up call in background
+  wakePythonService();
 });
 
 module.exports = app;
